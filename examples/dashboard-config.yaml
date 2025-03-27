@@ -1,0 +1,22 @@
+type: dashboard
+name: "example-dashboard"
+description: "Example dashboard for monitoring web performance"
+layout:
+  - type: "metric"
+    title: "Response Time"
+    test_id: "example-web-test"
+    metrics:
+      - "response_time"
+      - "dns_time"
+      - "connect_time"
+  - type: "metric"
+    title: "Error Rate"
+    test_id: "example-web-test"
+    metrics:
+      - "error_rate"
+      - "status_codes"
+  - type: "map"
+    title: "Geographic Distribution"
+    test_id: "example-web-test"
+    metrics:
+      - "response_time" 

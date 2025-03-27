@@ -1,0 +1,12 @@
+name: "my-web-test"
+url: "https://myapp.example.com"
+frequency: 600  # 10 minutes
+nodes:
+  - "US-East"
+  - "US-West"
+  - "EU-West"
+  - "AP-Southeast"
+response_time_threshold: 3000
+error_rate_threshold: 0.5
+alert_email: "alerts@myapp.example.com"
+alert_slack_channel: "#myapp-monitoring" 

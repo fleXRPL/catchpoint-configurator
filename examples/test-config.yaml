@@ -1,0 +1,23 @@
+type: test
+name: "example-web-test"
+url: "https://example.com"
+frequency: 300  # 5 minutes
+nodes:
+  - "US-East"
+  - "US-West"
+  - "EU-West"
+alerts:
+  - name: "High Response Time"
+    metric: "response_time"
+    threshold: 2000
+    operator: ">"
+    recipients:
+      - email: "alerts@example.com"
+      - slack: "#monitoring"
+  - name: "Error Rate"
+    metric: "error_rate"
+    threshold: 1
+    operator: ">"
+    recipients:
+      - email: "alerts@example.com"
+      - slack: "#monitoring" 
