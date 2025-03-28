@@ -2,6 +2,28 @@
 
 A Python-based tool for managing Catchpoint monitoring configurations as code.
 
+#### versions
+
+[![PyPI version](https://img.shields.io/pypi/v/catchpoint-configurator.svg)](https://pypi.org/project/catchpoint-configurator/)
+[![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![CI/CD Pipeline](https://github.com/fleXRPL/catchpoint-configurator/actions/workflows/workflow.yml/badge.svg)](https://github.com/fleXRPL/catchpoint-configurator/actions/workflows/workflow.yml)
+[![Python](https://img.shields.io/pypi/pyversions/catchpoint-configurator.svg)](https://pypi.org/project/catchpoint-configurator/)
+
+#### health
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=fleXRPL_catchpoint-configurator&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fleXRPL_catchpoint-configurator)
+[![Overall Coverage](https://sonarcloud.io/api/project_badges/measure?project=fleXRPL_catchpoint-configurator&metric=coverage)](https://sonarcloud.io/summary/new_code?id=fleXRPL_catchpoint-configurator)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fleXRPL_catchpoint-configurator&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fleXRPL_catchpoint-configurator)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=fleXRPL_catchpoint-configurator&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=fleXRPL_catchpoint-configurator)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=fleXRPL_catchpoint-configurator&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=fleXRPL_catchpoint-configurator)
+[![Dependabot Status](https://img.shields.io/badge/Dependabot-enabled-success.svg)](https://github.com/fleXRPL/catchpoint-configurator/blob/main/.github/dependabot.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+#### stats
+
+[![Downloads](https://pepy.tech/badge/catchpoint-configurator)](https://pepy.tech/project/catchpoint-configurator)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Features
 
 - Deploy and manage Catchpoint tests and dashboards using YAML configurations
