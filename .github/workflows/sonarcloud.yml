@@ -41,7 +41,7 @@ jobs:
         with:
           args: >
             -Dsonar.organization=flexrpl
-            -Dsonar.projectKey=fleXRPL_datadog-healthcheck-deployer
+            -Dsonar.projectKey=fleXRP_catchpoint-configurator
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.sources=src/catchpoint-configurator
             -Dsonar.tests=tests
