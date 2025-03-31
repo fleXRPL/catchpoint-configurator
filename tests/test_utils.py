@@ -1,23 +1,24 @@
 """Tests for utility functions."""
 
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 import pytest
 import yaml
-import logging
 
 from catchpoint_configurator.utils import (
-    load_yaml,
-    save_yaml,
-    get_logger,
     format_duration,
+    get_logger,
+    load_yaml,
     parse_duration,
-    validate_url,
+    save_yaml,
     validate_email,
     validate_slack_channel,
+    validate_url,
 )
+
 
 def test_load_yaml():
     """Test loading YAML files."""
@@ -33,10 +34,12 @@ def test_load_yaml():
         assert data["test"]["name"] == "test-web"
         assert data["test"]["url"] == "https://example.com"
 
+
 def test_load_yaml_not_found():
     """Test loading non-existent YAML file."""
     with pytest.raises(FileNotFoundError):
         load_yaml("non-existent.yaml")
+
 
 def test_load_yaml_invalid():
     """Test loading invalid YAML file."""
@@ -52,6 +55,7 @@ def test_load_yaml_invalid():
         with pytest.raises(yaml.YAMLError):
             load_yaml(f.name)
 
+
 def test_save_yaml():
     """Test saving YAML files."""
     data = {
@@ -65,8 +69,10 @@ def test_save_yaml():
         loaded_data = load_yaml(f.name)
         assert loaded_data == data
 
+
 def test_save_yaml_invalid_data():
     """Test saving invalid data to YAML."""
+
     class InvalidData:
         pass
 
@@ -74,12 +80,14 @@ def test_save_yaml_invalid_data():
         with pytest.raises(yaml.YAMLError):
             save_yaml(InvalidData(), f.name)
 
+
 def test_get_logger():
     """Test getting a logger instance."""
     logger = get_logger("test")
     assert isinstance(logger, logging.Logger)
     assert logger.name == "test"
     assert logger.level == 20  # INFO level
+
 
 def test_format_duration():
     """Test formatting duration."""
@@ -90,6 +98,7 @@ def test_format_duration():
     assert format_duration(3660) == "1h 1m"
     assert format_duration(65) == "1m 5s"
 
+
 def test_parse_duration():
     """Test parsing duration strings."""
     assert parse_duration("1m") == 60
@@ -99,6 +108,7 @@ def test_parse_duration():
     assert parse_duration("1h 1m") == 3660
     assert parse_duration("1m 5s") == 65
 
+
 def test_parse_duration_invalid():
     """Test parsing invalid duration strings."""
     with pytest.raises(ValueError):
@@ -107,6 +117,7 @@ def test_parse_duration_invalid():
         parse_duration("1x")
     with pytest.raises(ValueError):
         parse_duration("1m 1x")
+
 
 def test_validate_url():
     """Test URL validation."""
@@ -118,6 +129,7 @@ def test_validate_url():
     assert not validate_url("invalid-url")
     assert not validate_url("ftp://example.com")
     assert not validate_url("http://")
+
 
 def test_validate_email():
     """Test email validation."""
@@ -131,6 +143,7 @@ def test_validate_email():
     assert not validate_email("@example.com")
     assert not validate_email("user@.com")
 
+
 def test_validate_slack_channel():
     """Test Slack channel validation."""
     assert validate_slack_channel("#general")
@@ -142,30 +155,31 @@ def test_validate_slack_channel():
     assert not validate_slack_channel("@user")
     assert not validate_slack_channel("")
 
+
 def test_path_operations():
     """Test path operations."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create test files
         test_file = Path(temp_dir) / "test.yaml"
         test_file.write_text("test: data")
-        
+
         # Test path operations
         assert test_file.exists()
         assert test_file.suffix == ".yaml"
         assert test_file.stem == "test"
-        
+
         # Test directory operations
         test_dir = Path(temp_dir) / "test_dir"
         test_dir.mkdir()
         assert test_dir.is_dir()
         assert test_dir.exists()
-        
+
         # Test file operations
         new_file = test_dir / "new.yaml"
         new_file.write_text("new: data")
         assert new_file.exists()
         assert new_file.read_text() == "new: data"
-        
+
         # Test cleanup
         new_file.unlink()
         test_dir.rmdir()

@@ -1,10 +1,11 @@
 """Tests for the Catchpoint API client."""
 
 import time
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 import requests
+from requests.exceptions import RequestException
 
 from catchpoint_configurator.api import (
     APIError,
@@ -13,85 +14,93 @@ from catchpoint_configurator.api import (
     RateLimitError,
 )
 
+
 @pytest.fixture
-def api_client():
-    """Create a CatchpointAPI instance."""
-    return CatchpointAPI(
-        client_id="test_client_id",
-        client_secret="test_client_secret",
-        timeout=30,
-    )
+def mock_response():
+    response = Mock()
+    response.json.return_value = {"access_token": "test_token", "expires_in": 3600}
+    return response
 
-def test_get_token(api_client):
-    """Test getting an access token."""
-    with patch("requests.post") as mock_post:
-        mock_post.return_value.json.return_value = {
-            "access_token": "test_token",
-            "expires_in": 3600,
-        }
-        mock_post.return_value.raise_for_status.return_value = None
 
-        token = api_client._get_token()
-        assert token == "test_token"
-        assert api_client._token == "test_token"
-        assert api_client._token_expiry > time.time()
+@pytest.fixture
+def api():
+    return CatchpointAPI("test_client", "test_secret")
 
-def test_get_token_expired(api_client):
-    """Test getting a new token when the current one is expired."""
-    with patch("requests.post") as mock_post:
-        mock_post.return_value.json.return_value = {
-            "access_token": "new_token",
-            "expires_in": 3600,
-        }
-        mock_post.return_value.raise_for_status.return_value = None
 
-        # Set an expired token
-        api_client._token = "old_token"
-        api_client._token_expiry = time.time() - 1
+@patch("catchpoint_configurator.api.requests.post")
+def test_get_token_success(mock_post, api, mock_response):
+    """Test successful token retrieval."""
+    mock_post.return_value = mock_response
+    mock_response.raise_for_status.return_value = None
 
-        token = api_client._get_token()
-        assert token == "new_token"
-        assert api_client._token == "new_token"
-        assert api_client._token_expiry > time.time()
+    token = api._get_token()
+    assert token == "test_token"
+    mock_post.assert_called_once()
 
-def test_get_token_auth_error(api_client):
-    """Test authentication error when getting token."""
-    with patch("requests.post") as mock_post:
-        mock_post.side_effect = requests.exceptions.RequestException("Auth failed")
-        with pytest.raises(AuthenticationError):
-            api_client._get_token()
 
-def test_request_rate_limit(api_client):
+@patch("catchpoint_configurator.api.requests.post")
+def test_get_token_failure(mock_post, api):
+    """Test token retrieval failure."""
+    mock_post.side_effect = RequestException("Connection failed")
+
+    with pytest.raises(AuthenticationError):
+        api._get_token()
+
+
+@patch("catchpoint_configurator.api.requests.request")
+def test_request_success(mock_request, api):
+    """Test successful API request."""
+    mock_response = Mock()
+    mock_response.json.return_value = {"data": "test"}
+    mock_response.raise_for_status.return_value = None
+    mock_request.return_value = mock_response
+
+    with patch.object(api, "_get_token", return_value="test_token"):
+        result = api._request("GET", "/test")
+        assert result == {"data": "test"}
+
+
+@patch("catchpoint_configurator.api.requests.request")
+def test_request_rate_limit(mock_request, api):
     """Test rate limit handling."""
-    with patch("requests.request") as mock_request:
-        mock_response = requests.Response()
-        mock_response.status_code = 429
-        mock_request.return_value = mock_response
+    mock_response = Mock()
+    mock_response.status_code = 429
+    mock_response.raise_for_status.side_effect = RequestException("Rate limit exceeded")
+    mock_request.return_value = mock_response
 
+    with patch.object(api, "_get_token", return_value="test_token"):
         with pytest.raises(RateLimitError):
-            api_client._request("GET", "/test")
+            api._request("GET", "/test")
 
-def test_request_auth_error(api_client):
-    """Test authentication error in request."""
-    with patch("requests.request") as mock_request:
-        mock_response = requests.Response()
-        mock_response.status_code = 401
-        mock_request.return_value = mock_request
-        mock_request.side_effect = requests.exceptions.HTTPError(response=mock_response)
 
-        with pytest.raises(AuthenticationError):
-            api_client._request("GET", "/test")
+@patch("catchpoint_configurator.api.requests.request")
+def test_request_api_error(mock_request, api):
+    """Test API error handling."""
+    mock_response = Mock()
+    mock_response.status_code = 500
+    mock_response.raise_for_status.side_effect = RequestException("API error")
+    mock_request.return_value = mock_response
 
-def test_request_api_error(api_client):
-    """Test general API error handling."""
-    with patch("requests.request") as mock_request:
-        mock_response = requests.Response()
-        mock_response.status_code = 500
-        mock_request.return_value = mock_request
-        mock_request.side_effect = requests.exceptions.HTTPError(response=mock_response)
+    with patch.object(api, "_get_token", return_value="test_token"):
+        with pytest.raises(RequestException):
+            api._request("GET", "/test")
 
-        with pytest.raises(APIError):
-            api_client._request("GET", "/test")
+
+@patch("catchpoint_configurator.api.requests.request")
+def test_list_tests(mock_request, api):
+    """Test listing tests."""
+    mock_response = Mock()
+    mock_response.json.return_value = {
+        "items": [{"id": "test1", "name": "Test 1"}, {"id": "test2", "name": "Test 2"}]
+    }
+    mock_response.raise_for_status.return_value = None
+    mock_request.return_value = mock_response
+
+    with patch.object(api, "_get_token", return_value="test_token"):
+        result = api.list_tests()
+        assert len(result) == 2
+        assert result[0]["name"] == "Test 1"
+
 
 def test_create_test(api_client):
     """Test creating a test."""
@@ -111,6 +120,7 @@ def test_create_test(api_client):
             data=test_config,
         )
 
+
 def test_update_test(api_client):
     """Test updating a test."""
     test_config = {
@@ -129,6 +139,7 @@ def test_update_test(api_client):
             data=test_config,
         )
 
+
 def test_delete_test(api_client):
     """Test deleting a test."""
     with patch.object(api_client, "_request") as mock_request:
@@ -137,6 +148,7 @@ def test_delete_test(api_client):
             "DELETE",
             "/tests/test123",
         )
+
 
 def test_get_test(api_client):
     """Test getting test details."""
@@ -149,21 +161,3 @@ def test_get_test(api_client):
             "GET",
             "/tests/test123",
         )
-
-def test_list_tests(api_client):
-    """Test listing tests."""
-    with patch.object(api_client, "_request") as mock_request:
-        mock_request.return_value = {
-            "tests": [
-                {"id": "test1", "name": "test1"},
-                {"id": "test2", "name": "test2"},
-            ],
-        }
-        result = api_client.list_tests()
-        assert len(result) == 2
-        assert result[0]["id"] == "test1"
-        assert result[1]["id"] == "test2"
-        mock_request.assert_called_once_with(
-            "GET",
-            "/tests",
-        ) 

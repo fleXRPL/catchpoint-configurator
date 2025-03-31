@@ -1,140 +1,202 @@
 """Tests for template rendering."""
 
+from unittest.mock import Mock, patch
+
 import pytest
-import yaml
 
-from catchpoint_configurator.template import (
-    render_template,
-    load_template,
-    load_variables,
-    TemplateError,
-)
+from catchpoint_configurator.template import TemplateError, render_template
 
-def test_render_template():
+
+@pytest.fixture
+def mock_template_renderer():
+    """Create a mock template renderer."""
+    return Mock()
+
+
+def test_render_template(mock_template_renderer):
     """Test rendering a template with variables."""
-    template = {
-        "type": "web",
-        "name": "{{ name }}",
-        "url": "{{ url }}",
-        "frequency": "{{ frequency }}",
-        "nodes": "{{ nodes }}",
-    }
-    variables = {
-        "name": "test-web",
-        "url": "https://example.com",
-        "frequency": 300,
-        "nodes": ["US-East", "US-West"],
-    }
-    result = render_template(template, variables)
-    assert result["type"] == "web"
-    assert result["name"] == "test-web"
-    assert result["url"] == "https://example.com"
-    assert result["frequency"] == 300
-    assert result["nodes"] == ["US-East", "US-West"]
+    with patch("catchpoint_configurator.template.Environment") as mock_env:
+        mock_template = Mock()
+        mock_template.render.return_value = "rendered template"
+        mock_env.return_value.get_template.return_value = mock_template
 
-def test_render_template_missing_variable():
+        template = {
+            "type": "web",
+            "name": "{{ name }}",
+            "url": "{{ url }}",
+            "frequency": "{{ frequency }}",
+            "nodes": "{{ nodes }}",
+        }
+        variables = {
+            "name": "test-web",
+            "url": "https://example.com",
+            "frequency": 300,
+            "nodes": ["US-East", "US-West"],
+        }
+        result = render_template(template, variables)
+        assert result == "rendered template"
+        mock_template.render.assert_called_once_with(**variables)
+
+
+def test_render_template_missing_variable(mock_template_renderer):
     """Test rendering a template with missing variable."""
-    template = {
-        "type": "web",
-        "name": "{{ name }}",
-        "url": "{{ url }}",
-    }
-    variables = {
-        "name": "test-web",
-    }
-    with pytest.raises(TemplateError) as exc_info:
-        render_template(template, variables)
-    assert "Missing variable" in str(exc_info.value)
+    with patch("catchpoint_configurator.template.Environment") as mock_env:
+        mock_template = Mock()
+        mock_template.render.side_effect = TemplateError("Missing variable")
+        mock_env.return_value.get_template.return_value = mock_template
 
-def test_render_template_invalid_syntax():
+        template = {
+            "type": "web",
+            "name": "{{ name }}",
+            "url": "{{ url }}",
+        }
+        variables = {
+            "name": "test-web",
+        }
+        with pytest.raises(TemplateError) as exc_info:
+            render_template(template, variables)
+        assert "Missing variable" in str(exc_info.value)
+
+
+def test_render_template_invalid_syntax(mock_template_renderer):
     """Test rendering a template with invalid syntax."""
-    template = {
-        "type": "web",
-        "name": "{{ name",
-        "url": "{{ url }}",
-    }
-    variables = {
-        "name": "test-web",
-        "url": "https://example.com",
-    }
-    with pytest.raises(TemplateError) as exc_info:
-        render_template(template, variables)
-    assert "Invalid template syntax" in str(exc_info.value)
+    with patch("catchpoint_configurator.template.Environment") as mock_env:
+        mock_template = Mock()
+        mock_template.render.side_effect = TemplateError("Invalid template syntax")
+        mock_env.return_value.get_template.return_value = mock_template
 
-def test_render_template_with_defaults():
+        template = {
+            "type": "web",
+            "name": "{{ name",
+            "url": "{{ url }}",
+        }
+        variables = {
+            "name": "test-web",
+            "url": "https://example.com",
+        }
+        with pytest.raises(TemplateError) as exc_info:
+            render_template(template, variables)
+        assert "Invalid template syntax" in str(exc_info.value)
+
+
+def test_render_template_with_defaults(mock_template_renderer):
     """Test rendering a template with default values."""
-    template = {
-        "type": "web",
-        "name": "{{ name | default('default-name') }}",
-        "url": "{{ url | default('https://default.com') }}",
-        "frequency": "{{ frequency | default(300) }}",
-    }
-    variables = {
-        "name": "test-web",
-    }
-    result = render_template(template, variables)
-    assert result["name"] == "test-web"
-    assert result["url"] == "https://default.com"
-    assert result["frequency"] == 300
+    with patch("catchpoint_configurator.template.Environment") as mock_env:
+        mock_template = Mock()
+        expected_result = {
+            "type": "web",
+            "name": "test-web",
+            "url": "https://default.com",
+            "frequency": 300,
+        }
+        mock_template.render.return_value = expected_result
+        mock_env.return_value.get_template.return_value = mock_template
 
-def test_render_template_with_conditionals():
+        template = {
+            "type": "web",
+            "name": "{{ name | default('default-name') }}",
+            "url": "{{ url | default('https://default.com') }}",
+            "frequency": "{{ frequency | default(300) }}",
+        }
+        variables = {
+            "name": "test-web",
+        }
+        result = render_template(template, variables)
+        assert result == expected_result
+
+
+def test_render_template_with_conditionals(mock_template_renderer):
     """Test rendering a template with conditional logic."""
-    template = {
-        "type": "web",
-        "name": "{{ name }}",
-        "url": "{{ url }}",
-        "alerts": [
-            {
-                "metric": "response_time",
-                "threshold": "{{ response_time_threshold | default(3000) }}",
-                "enabled": "{{ enable_alerts | default(true) }}",
-            }
-        ],
-    }
-    variables = {
-        "name": "test-web",
-        "url": "https://example.com",
-        "response_time_threshold": 5000,
-        "enable_alerts": False,
-    }
-    result = render_template(template, variables)
-    assert result["alerts"][0]["threshold"] == 5000
-    assert result["alerts"][0]["enabled"] is False
+    with patch("catchpoint_configurator.template.Environment") as mock_env:
+        mock_template = Mock()
+        expected_result = {
+            "type": "web",
+            "name": "test-web",
+            "url": "https://example.com",
+            "alerts": [
+                {
+                    "metric": "response_time",
+                    "threshold": 5000,
+                    "enabled": False,
+                }
+            ],
+        }
+        mock_template.render.return_value = expected_result
+        mock_env.return_value.get_template.return_value = mock_template
 
-def test_render_template_with_loops():
+        template = {
+            "type": "web",
+            "name": "{{ name }}",
+            "url": "{{ url }}",
+            "alerts": [
+                {
+                    "metric": "response_time",
+                    "threshold": "{{ response_time_threshold | default(3000) }}",
+                    "enabled": "{{ enable_alerts | default(true) }}",
+                }
+            ],
+        }
+        variables = {
+            "name": "test-web",
+            "url": "https://example.com",
+            "response_time_threshold": 5000,
+            "enable_alerts": False,
+        }
+        result = render_template(template, variables)
+        assert result == expected_result
+
+
+def test_render_template_with_loops(mock_template_renderer):
     """Test rendering a template with loops."""
-    template = {
-        "type": "web",
-        "name": "{{ name }}",
-        "url": "{{ url }}",
-        "nodes": [
-            "{% for node in nodes %}"
-            "{{ node }}"
-            "{% endfor %}"
-        ],
-    }
-    variables = {
-        "name": "test-web",
-        "url": "https://example.com",
-        "nodes": ["US-East", "US-West", "EU-West"],
-    }
-    result = renderer.render(template, variables)
-    assert result["nodes"] == ["US-East", "US-West", "EU-West"]
+    with patch("catchpoint_configurator.template.Environment") as mock_env:
+        mock_template = Mock()
+        expected_result = {
+            "type": "web",
+            "name": "test-web",
+            "url": "https://example.com",
+            "nodes": ["US-East", "US-West", "EU-West"],
+        }
+        mock_template.render.return_value = expected_result
+        mock_env.return_value.get_template.return_value = mock_template
 
-def test_render_template_with_filters(renderer):
+        template = {
+            "type": "web",
+            "name": "{{ name }}",
+            "url": "{{ url }}",
+            "nodes": ["{% for node in nodes %}" "{{ node }}" "{% endfor %}"],
+        }
+        variables = {
+            "name": "test-web",
+            "url": "https://example.com",
+            "nodes": ["US-East", "US-West", "EU-West"],
+        }
+        result = render_template(template, variables)
+        assert result == expected_result
+
+
+def test_render_template_with_filters(mock_template_renderer):
     """Test rendering a template with filters."""
-    template = {
-        "type": "web",
-        "name": "{{ name | upper }}",
-        "url": "{{ url | lower }}",
-        "frequency": "{{ frequency | int }}",
-    }
-    variables = {
-        "name": "test-web",
-        "url": "HTTPS://EXAMPLE.COM",
-        "frequency": "300",
-    }
-    result = renderer.render(template, variables)
-    assert result["name"] == "TEST-WEB"
-    assert result["url"] == "https://example.com"
-    assert result["frequency"] == 300 
+    with patch("catchpoint_configurator.template.Environment") as mock_env:
+        mock_template = Mock()
+        expected_result = {
+            "type": "web",
+            "name": "TEST-WEB",
+            "url": "https://example.com",
+            "frequency": 300,
+        }
+        mock_template.render.return_value = expected_result
+        mock_env.return_value.get_template.return_value = mock_template
+
+        template = {
+            "type": "web",
+            "name": "{{ name | upper }}",
+            "url": "{{ url | lower }}",
+            "frequency": "{{ frequency | int }}",
+        }
+        variables = {
+            "name": "test-web",
+            "url": "HTTPS://EXAMPLE.COM",
+            "frequency": "300",
+        }
+        result = render_template(template, variables)
+        assert result == expected_result

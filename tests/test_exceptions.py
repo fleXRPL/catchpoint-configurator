@@ -3,16 +3,17 @@
 import pytest
 
 from catchpoint_configurator.exceptions import (
-    CatchpointConfiguratorError,
-    ValidationError,
-    DeploymentError,
-    TemplateError,
     APIError,
-    ConfigError,
     AuthError,
+    CatchpointConfiguratorError,
+    ConfigError,
+    DeploymentError,
     NotFoundError,
     RateLimitError,
+    ValidationError,
 )
+from catchpoint_configurator.template import TemplateError
+
 
 def test_base_exception():
     """Test base exception."""
@@ -20,6 +21,7 @@ def test_base_exception():
     assert str(error) == "Test error"
     assert error.message == "Test error"
     assert error.details is None
+
 
 def test_base_exception_with_details():
     """Test base exception with details."""
@@ -29,12 +31,14 @@ def test_base_exception_with_details():
     assert error.message == "Test error"
     assert error.details == details
 
+
 def test_validation_error():
     """Test validation error."""
     error = ValidationError("Invalid configuration")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Invalid configuration"
     assert error.message == "Invalid configuration"
+
 
 def test_validation_error_with_details():
     """Test validation error with details."""
@@ -44,12 +48,14 @@ def test_validation_error_with_details():
     assert str(error) == "Invalid configuration"
     assert error.details == details
 
+
 def test_deployment_error():
     """Test deployment error."""
     error = DeploymentError("Deployment failed")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Deployment failed"
     assert error.message == "Deployment failed"
+
 
 def test_deployment_error_with_details():
     """Test deployment error with details."""
@@ -59,12 +65,14 @@ def test_deployment_error_with_details():
     assert str(error) == "Deployment failed"
     assert error.details == details
 
+
 def test_template_error():
     """Test template error."""
     error = TemplateError("Template rendering failed")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Template rendering failed"
     assert error.message == "Template rendering failed"
+
 
 def test_template_error_with_details():
     """Test template error with details."""
@@ -74,12 +82,14 @@ def test_template_error_with_details():
     assert str(error) == "Template rendering failed"
     assert error.details == details
 
+
 def test_api_error():
     """Test API error."""
     error = APIError("API request failed")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "API request failed"
     assert error.message == "API request failed"
+
 
 def test_api_error_with_details():
     """Test API error with details."""
@@ -89,12 +99,14 @@ def test_api_error_with_details():
     assert str(error) == "API request failed"
     assert error.details == details
 
+
 def test_config_error():
     """Test config error."""
     error = ConfigError("Configuration error")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Configuration error"
     assert error.message == "Configuration error"
+
 
 def test_config_error_with_details():
     """Test config error with details."""
@@ -104,12 +116,14 @@ def test_config_error_with_details():
     assert str(error) == "Configuration error"
     assert error.details == details
 
+
 def test_auth_error():
     """Test authentication error."""
     error = AuthError("Authentication failed")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Authentication failed"
     assert error.message == "Authentication failed"
+
 
 def test_auth_error_with_details():
     """Test authentication error with details."""
@@ -119,12 +133,14 @@ def test_auth_error_with_details():
     assert str(error) == "Authentication failed"
     assert error.details == details
 
+
 def test_not_found_error():
     """Test not found error."""
     error = NotFoundError("Resource not found")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Resource not found"
     assert error.message == "Resource not found"
+
 
 def test_not_found_error_with_details():
     """Test not found error with details."""
@@ -134,12 +150,14 @@ def test_not_found_error_with_details():
     assert str(error) == "Resource not found"
     assert error.details == details
 
+
 def test_rate_limit_error():
     """Test rate limit error."""
     error = RateLimitError("Rate limit exceeded")
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Rate limit exceeded"
     assert error.message == "Rate limit exceeded"
+
 
 def test_rate_limit_error_with_details():
     """Test rate limit error with details."""
@@ -148,6 +166,7 @@ def test_rate_limit_error_with_details():
     assert isinstance(error, CatchpointConfiguratorError)
     assert str(error) == "Rate limit exceeded"
     assert error.details == details
+
 
 def test_exception_hierarchy():
     """Test exception hierarchy."""
@@ -158,4 +177,4 @@ def test_exception_hierarchy():
     assert issubclass(ConfigError, CatchpointConfiguratorError)
     assert issubclass(AuthError, CatchpointConfiguratorError)
     assert issubclass(NotFoundError, CatchpointConfiguratorError)
-    assert issubclass(RateLimitError, CatchpointConfiguratorError) 
+    assert issubclass(RateLimitError, CatchpointConfiguratorError)

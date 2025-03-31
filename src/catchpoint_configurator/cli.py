@@ -10,9 +10,9 @@ import click
 from click import Context
 
 from .core import CatchpointConfigurator
-from .utils import get_env_var, setup_logging
 
 logger = logging.getLogger(__name__)
+
 
 def get_client(ctx: Context) -> CatchpointConfigurator:
     """Get a CatchpointConfigurator instance from context.
@@ -24,6 +24,7 @@ def get_client(ctx: Context) -> CatchpointConfigurator:
         CatchpointConfigurator instance
     """
     return ctx.ensure_object(CatchpointConfigurator)
+
 
 @click.group()
 @click.option(
@@ -58,13 +59,15 @@ def cli(
     timeout: int,
 ) -> None:
     """Catchpoint Configurator CLI."""
-    setup_logging("DEBUG" if debug else "INFO")
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
     ctx.obj = CatchpointConfigurator(
         client_id=client_id,
         client_secret=client_secret,
         debug=debug,
         timeout=timeout,
     )
+
 
 @cli.command()
 @click.argument("config_path", type=click.Path(exists=True))
@@ -97,6 +100,7 @@ def deploy(
         logger.error(f"Deployment failed: {e}")
         sys.exit(1)
 
+
 @cli.command()
 @click.argument("config_path", type=click.Path(exists=True))
 @click.pass_context
@@ -108,6 +112,7 @@ def validate(ctx: Context, config_path: str) -> None:
     except Exception as e:
         logger.error(f"Validation failed: {e}")
         sys.exit(1)
+
 
 @cli.command()
 @click.option(
@@ -124,6 +129,7 @@ def list(ctx: Context, type: Optional[str]) -> None:
     except Exception as e:
         logger.error(f"Failed to list configurations: {e}")
         sys.exit(1)
+
 
 @cli.command()
 @click.argument("template_name")
@@ -152,6 +158,7 @@ def apply_template(
         logger.error(f"Template application failed: {e}")
         sys.exit(1)
 
+
 @cli.command()
 @click.argument("config_path", type=click.Path(exists=True))
 @click.argument("updates", type=click.Path(exists=True))
@@ -179,6 +186,7 @@ def update(
         logger.error(f"Update failed: {e}")
         sys.exit(1)
 
+
 @cli.command()
 @click.argument("config_path", type=click.Path(exists=True))
 @click.option(
@@ -202,6 +210,7 @@ def delete(
     except Exception as e:
         logger.error(f"Deletion failed: {e}")
         sys.exit(1)
+
 
 @cli.command()
 @click.argument("config_path", type=click.Path(exists=True))
@@ -235,6 +244,7 @@ def export(
         logger.error(f"Export failed: {e}")
         sys.exit(1)
 
+
 @cli.command()
 @click.argument("import_path", type=click.Path(exists=True))
 @click.option(
@@ -266,6 +276,7 @@ def import_config(
     except Exception as e:
         logger.error(f"Import failed: {e}")
         sys.exit(1)
+
 
 def main() -> None:
     """Entry point for the CLI."""

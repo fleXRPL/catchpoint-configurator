@@ -3,17 +3,16 @@
 import pytest
 import yaml
 
-from catchpoint_configurator.config import (
-    ConfigError,
-    ConfigValidator,
-    TestConfig,
-    AlertConfig,
-)
+from catchpoint_configurator.config import ConfigValidator
+from catchpoint_configurator.exceptions import ConfigError
+from catchpoint_configurator.types import AlertConfig, TestConfig
+
 
 @pytest.fixture
 def validator():
     """Create a ConfigValidator instance."""
     return ConfigValidator()
+
 
 def test_validate_test_config(validator):
     """Test validating a test configuration."""
@@ -27,6 +26,7 @@ def test_validate_test_config(validator):
     result = validator.validate_test_config(config)
     assert result is True
 
+
 def test_validate_test_config_missing_required(validator):
     """Test validating a test configuration with missing required fields."""
     config = {
@@ -36,6 +36,7 @@ def test_validate_test_config_missing_required(validator):
     with pytest.raises(ConfigError) as exc_info:
         validator.validate_test_config(config)
     assert "Missing required field" in str(exc_info.value)
+
 
 def test_validate_test_config_invalid_type(validator):
     """Test validating a test configuration with invalid type."""
@@ -48,6 +49,7 @@ def test_validate_test_config_invalid_type(validator):
         validator.validate_test_config(config)
     assert "Invalid test type" in str(exc_info.value)
 
+
 def test_validate_alert_config(validator):
     """Test validating an alert configuration."""
     config = {
@@ -58,6 +60,7 @@ def test_validate_alert_config(validator):
     }
     result = validator.validate_alert_config(config)
     assert result is True
+
 
 def test_validate_alert_config_invalid_metric(validator):
     """Test validating an alert configuration with invalid metric."""
@@ -71,6 +74,7 @@ def test_validate_alert_config_invalid_metric(validator):
         validator.validate_alert_config(config)
     assert "Invalid metric" in str(exc_info.value)
 
+
 def test_validate_alert_config_invalid_condition(validator):
     """Test validating an alert configuration with invalid condition."""
     config = {
@@ -82,6 +86,7 @@ def test_validate_alert_config_invalid_condition(validator):
     with pytest.raises(ConfigError) as exc_info:
         validator.validate_alert_config(config)
     assert "Invalid condition" in str(exc_info.value)
+
 
 def test_validate_dashboard_config(validator):
     """Test validating a dashboard configuration."""
@@ -101,6 +106,7 @@ def test_validate_dashboard_config(validator):
     result = validator.validate_dashboard_config(config)
     assert result is True
 
+
 def test_validate_dashboard_config_invalid_layout(validator):
     """Test validating a dashboard configuration with invalid layout."""
     config = {
@@ -118,6 +124,7 @@ def test_validate_dashboard_config_invalid_layout(validator):
         validator.validate_dashboard_config(config)
     assert "Invalid widget type" in str(exc_info.value)
 
+
 def test_validate_yaml_file(validator):
     """Test validating a YAML configuration file."""
     yaml_content = """
@@ -132,6 +139,7 @@ def test_validate_yaml_file(validator):
     result = validator.validate_yaml(yaml_content)
     assert result is True
 
+
 def test_validate_yaml_file_invalid(validator):
     """Test validating an invalid YAML configuration file."""
     yaml_content = """
@@ -142,6 +150,7 @@ def test_validate_yaml_file_invalid(validator):
     with pytest.raises(ConfigError) as exc_info:
         validator.validate_yaml(yaml_content)
     assert "Invalid URL" in str(exc_info.value)
+
 
 def test_test_config_class():
     """Test the TestConfig class."""
@@ -157,6 +166,7 @@ def test_test_config_class():
     assert config.url == "https://example.com"
     assert config.frequency == 300
     assert config.nodes == ["US-East", "US-West"]
+
 
 def test_alert_config_class():
     """Test the AlertConfig class."""

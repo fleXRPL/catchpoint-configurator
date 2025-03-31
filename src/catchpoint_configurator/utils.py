@@ -4,65 +4,102 @@ Utility functions for Catchpoint Configurator.
 
 import logging
 import os
-import sys
+import re
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 import yaml
 
-logger = logging.getLogger(__name__)
+from .exceptions import ValidationError
 
-def load_yaml(path: str) -> Dict[str, Any]:
-    """Load a YAML file.
+
+def get_logger(name: str, level: str = "INFO") -> logging.Logger:
+    """Get a logger instance.
 
     Args:
-        path: Path to the YAML file
+        name: Logger name
+        level: Logging level
 
     Returns:
-        Dictionary containing the YAML data
-
-    Raises:
-        FileNotFoundError: If the file doesn't exist
-        yaml.YAMLError: If the YAML is invalid
+        Logger instance
     """
-    try:
-        with open(path, "r") as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        logger.error(f"File not found: {path}")
-        raise
-    except yaml.YAMLError as e:
-        logger.error(f"Invalid YAML in {path}: {e}")
-        raise
+    logger = logging.getLogger(name)
+    logger.setLevel(getattr(logging, level))
 
-def save_yaml(data: Dict[str, Any], path: str) -> None:
-    """Save data to a YAML file.
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
-    Args:
-        data: Dictionary to save
-        path: Path to save the YAML file
+    return logger
 
-    Raises:
-        IOError: If the file can't be written
-    """
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False)
-    except IOError as e:
-        logger.error(f"Failed to write {path}: {e}")
-        raise
 
-def get_env_var(name: str, default: Optional[str] = None) -> Optional[str]:
+def get_env_var(name: str, required: bool = True) -> Optional[str]:
     """Get an environment variable.
 
     Args:
-        name: Name of the environment variable
-        default: Default value if not set
+        name: Environment variable name
+        required: Whether the variable is required
 
     Returns:
-        Value of the environment variable or default
+        Environment variable value or None if not required and not found
+
+    Raises:
+        ValidationError: If required variable is not found
     """
-    return os.environ.get(name, default)
+    value = os.environ.get(name)
+    if required and not value:
+        raise ValidationError(f"Required environment variable {name} not found")
+    return value
+
+
+def load_yaml(file_path: str) -> Dict[str, Any]:
+    """Load YAML file.
+
+    Args:
+        file_path: Path to YAML file
+
+    Returns:
+        YAML data as dictionary
+
+    Raises:
+        FileNotFoundError: If file does not exist
+        yaml.YAMLError: If YAML is invalid
+    """
+    try:
+        with open(file_path, "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found: {file_path}")
+    except yaml.YAMLError as e:
+        raise yaml.YAMLError(f"Invalid YAML in {file_path}: {e}")
+
+
+def save_yaml(data: Any, file_path: str) -> None:
+    """Save data to YAML file.
+
+    Args:
+        data: Data to save
+        file_path: Path to YAML file
+
+    Raises:
+        yaml.YAMLError: If YAML is invalid
+    """
+    try:
+        # Try to serialize the data to YAML first to catch any issues
+        yaml_str = yaml.dump(data, default_flow_style=False)
+    except yaml.YAMLError as e:
+        raise yaml.YAMLError(f"Failed to serialize data to YAML: {e}")
+
+    try:
+        with open(file_path, "w") as f:
+            f.write(yaml_str)
+    except IOError as e:
+        raise IOError(f"Failed to write YAML file: {e}")
+
 
 def setup_logging(level: str = "INFO") -> None:
     """Set up logging configuration.
@@ -75,24 +112,52 @@ def setup_logging(level: str = "INFO") -> None:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
+
 def validate_url(url: str) -> bool:
-    """Validate a URL.
+    """Validate URL.
 
     Args:
         url: URL to validate
 
     Returns:
-        True if the URL is valid
+        True if URL is valid
     """
     try:
-        from urllib.parse import urlparse
         result = urlparse(url)
-        return all([result.scheme, result.netloc])
+        return all([result.scheme in ["http", "https"], result.netloc])
     except Exception:
         return False
 
+
+def validate_email(email: str) -> bool:
+    """Validate an email address.
+
+    Args:
+        email: Email address to validate
+
+    Returns:
+        True if the email address is valid
+    """
+    import re
+
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return bool(re.match(pattern, email))
+
+
+def validate_slack_channel(channel: str) -> bool:
+    """Validate Slack channel name.
+
+    Args:
+        channel: Channel name to validate
+
+    Returns:
+        True if channel name is valid
+    """
+    return bool(re.match(r"^#[a-z0-9_-]+$", channel))
+
+
 def format_duration(seconds: int) -> str:
-    """Format a duration in seconds to a human-readable string.
+    """Format duration in seconds to human-readable string.
 
     Args:
         seconds: Duration in seconds
@@ -100,16 +165,58 @@ def format_duration(seconds: int) -> str:
     Returns:
         Formatted duration string
     """
-    if seconds < 60:
-        return f"{seconds}s"
-    elif seconds < 3600:
-        minutes = seconds // 60
-        seconds = seconds % 60
-        return f"{minutes}m{seconds}s"
-    else:
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        return f"{hours}h{minutes}m"
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    days, hours = divmod(hours, 24)
+
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if seconds or not parts:
+        parts.append(f"{seconds}s")
+
+    return " ".join(parts)
+
+
+def parse_duration(duration_str: str) -> int:
+    """Parse a duration string into seconds.
+
+    Args:
+        duration_str: Duration string (e.g., "1h", "30m", "1d 6h")
+
+    Returns:
+        Duration in seconds
+
+    Raises:
+        ValueError: If the duration string is invalid
+    """
+    total_seconds = 0
+    parts = duration_str.split()
+
+    for part in parts:
+        if not part[-1].isalpha() or not part[:-1].isdigit():
+            raise ValueError(f"Invalid duration format: {part}")
+
+        value = int(part[:-1])
+        unit = part[-1]
+
+        if unit == "s":
+            total_seconds += value
+        elif unit == "m":
+            total_seconds += value * 60
+        elif unit == "h":
+            total_seconds += value * 3600
+        elif unit == "d":
+            total_seconds += value * 86400
+        else:
+            raise ValueError(f"Invalid duration unit: {unit}")
+
+    return total_seconds
+
 
 def validate_environment() -> None:
     """
@@ -118,7 +225,7 @@ def validate_environment() -> None:
     Raises:
         EnvironmentError: If required variables are missing
     """
-    required_vars = ["DATADOG_API_KEY", "DATADOG_APP_KEY"]
+    required_vars = ["CATCHPOINT_CLIENT_ID", "CATCHPOINT_CLIENT_SECRET"]
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
 
     if missing_vars:
@@ -161,6 +268,4 @@ def get_version() -> str:
     Returns:
         Package version string
     """
-    from . import __version__
-
-    return __version__
+    return "1.0.0"  # TODO: Use dynamic version

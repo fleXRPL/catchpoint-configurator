@@ -4,7 +4,7 @@ Catchpoint Configurator - A framework for deploying Catchpoint monitoring config
 
 __version__ = "1.0.0"
 
-from .core import CatchpointConfigurator
 from .config import ConfigValidator
+from .core import CatchpointConfigurator
 
 __all__ = ["CatchpointConfigurator", "ConfigValidator"]

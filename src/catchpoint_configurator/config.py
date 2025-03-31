@@ -2,12 +2,21 @@
 Configuration parsing and validation module.
 """
 
+import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from pathlib import Path
+from typing import Any, Dict
 
 import yaml
 from jsonschema import ValidationError, validate
+
+from catchpoint_configurator.types import (
+    AlertConfig,
+    DashboardConfig,
+    LayoutConfig,
+    TestConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -163,79 +172,135 @@ class ConfigParser:
 
 
 class ConfigValidator:
-    """Validator for Catchpoint configurations."""
+    """Configuration validator."""
 
     def __init__(self):
-        """Initialize the validator with schema definitions."""
-        self.schemas = {
-            "test": {
-                "type": "object",
-                "required": ["name", "type", "url"],
-                "properties": {
-                    "name": {"type": "string"},
-                    "type": {
-                        "type": "string",
-                        "enum": ["web", "api", "transaction", "dns", "traceroute"],
-                    },
-                    "url": {"type": "string", "format": "uri"},
-                    "frequency": {"type": "integer", "minimum": 1},
-                    "nodes": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                    },
-                    "alerts": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "required": ["name", "metric", "threshold", "operator"],
-                            "properties": {
-                                "name": {"type": "string"},
-                                "metric": {"type": "string"},
-                                "threshold": {"type": "number"},
-                                "operator": {
-                                    "type": "string",
-                                    "enum": [">", "<", ">=", "<=", "==", "!="],
-                                },
-                                "recipients": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "email": {"type": "string", "format": "email"},
-                                            "slack": {"type": "string"},
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            "dashboard": {
-                "type": "object",
-                "required": ["name", "layout"],
-                "properties": {
-                    "name": {"type": "string"},
-                    "description": {"type": "string"},
-                    "layout": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "required": ["type", "title"],
-                            "properties": {
-                                "type": {"type": "string"},
-                                "title": {"type": "string"},
-                                "test_id": {"type": "string"},
-                                "metrics": {
-                                    "type": "array",
-                                    "items": {"type": "string"},
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        }
+        """Initialize validator."""
+        self.schemas = self._load_schemas()
+
+    def _load_schemas(self) -> Dict[str, Dict[str, Any]]:
+        """Load JSON schemas.
+
+        Returns:
+            Dictionary of schemas
+        """
+        schemas_dir = Path(__file__).parent / "schemas"
+        schemas = {}
+        for schema_file in schemas_dir.glob("*.json"):
+            with open(schema_file) as f:
+                schema = json.load(f)
+                schemas[schema_file.stem] = schema
+        return schemas
+
+    def validate_test_config(self, config: TestConfig) -> bool:
+        """Validate a test configuration.
+
+        Args:
+            config: Test configuration to validate
+
+        Returns:
+            True if validation passes
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        required_fields = ["name", "type", "url", "frequency"]
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValidationError(
+                f"Missing required fields: {', '.join(missing_fields)}"
+            )
+
+        valid_types = ["web", "api", "transaction", "dns", "traceroute"]
+        if config["type"] not in valid_types:
+            raise ValidationError(f"Invalid test type: {config['type']}")
+
+        return True
+
+    def validate_alert_config(self, config: AlertConfig) -> bool:
+        """Validate an alert configuration.
+
+        Args:
+            config: Alert configuration to validate
+
+        Returns:
+            True if validation passes
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        required_fields = ["name", "metric", "operator", "threshold", "recipients"]
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValidationError(
+                f"Missing required fields: {', '.join(missing_fields)}"
+            )
+
+        valid_metrics = ["response_time", "availability", "throughput"]
+        if config["metric"] not in valid_metrics:
+            raise ValidationError(f"Invalid metric: {config['metric']}")
+
+        valid_operators = [">", "<", ">=", "<=", "=="]
+        if config["operator"] not in valid_operators:
+            raise ValidationError(f"Invalid operator: {config['operator']}")
+
+        for recipient in config["recipients"]:
+            if not isinstance(recipient, dict) or "email" not in recipient:
+                raise ValidationError("Invalid recipient format")
+
+        return True
+
+    def validate_dashboard_config(self, config: DashboardConfig) -> bool:
+        """Validate a dashboard configuration.
+
+        Args:
+            config: Dashboard configuration to validate
+
+        Returns:
+            True if validation passes
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        required_fields = ["name", "type", "layout"]
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValidationError(
+                f"Missing required fields: {', '.join(missing_fields)}"
+            )
+
+        if config["type"] != "dashboard":
+            raise ValidationError(f"Invalid type: {config['type']}")
+
+        for widget in config["layout"]:
+            self.validate_layout_config(widget)
+
+        return True
+
+    def validate_layout_config(self, config: LayoutConfig) -> bool:
+        """Validate a layout configuration.
+
+        Args:
+            config: Layout configuration to validate
+
+        Returns:
+            True if validation passes
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        required_fields = ["type", "title", "test_id"]
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValidationError(
+                f"Missing required fields: {', '.join(missing_fields)}"
+            )
+
+        valid_types = ["chart", "table", "gauge"]
+        if config["type"] not in valid_types:
+            raise ValidationError(f"Invalid widget type: {config['type']}")
+
+        return True
 
     def validate(self, config: Dict[str, Any]) -> bool:
         """Validate a configuration against its schema.
@@ -253,56 +318,34 @@ class ConfigValidator:
             raise ValidationError("Configuration must specify a type")
 
         config_type = config["type"]
-        if config_type not in self.schemas:
+        if config_type not in [
+            "web",
+            "api",
+            "transaction",
+            "dns",
+            "traceroute",
+            "dashboard",
+        ]:
             raise ValidationError(f"Unknown configuration type: {config_type}")
 
-        try:
-            validate(instance=config, schema=self.schemas[config_type])
-            return True
-        except ValidationError as e:
-            logger.error(f"Validation failed: {e}")
-            raise
+        if config_type == "dashboard":
+            return self.validate_dashboard_config(config)
+        else:
+            return self.validate_test_config(config)
 
-    def get_schema(self, config_type: str) -> Dict[str, Any]:
-        """Get the schema for a configuration type.
+    def validate_yaml(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate YAML data.
 
         Args:
-            config_type: Type of configuration
+            data: YAML data to validate
 
         Returns:
-            Schema dictionary
-
-        Raises:
-            ValueError: If the configuration type is unknown
-        """
-        if config_type not in self.schemas:
-            raise ValueError(f"Unknown configuration type: {config_type}")
-        return self.schemas[config_type]
-
-    def validate_test(self, test_config: Dict[str, Any]) -> bool:
-        """Validate a test configuration.
-
-        Args:
-            test_config: Test configuration dictionary
-
-        Returns:
-            True if validation succeeds
+            Validated YAML data
 
         Raises:
             ValidationError: If validation fails
         """
-        return self.validate({"type": "test", **test_config})
+        if not isinstance(data, dict):
+            raise ValidationError("YAML data must be a dictionary")
 
-    def validate_dashboard(self, dashboard_config: Dict[str, Any]) -> bool:
-        """Validate a dashboard configuration.
-
-        Args:
-            dashboard_config: Dashboard configuration dictionary
-
-        Returns:
-            True if validation succeeds
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        return self.validate({"type": "dashboard", **dashboard_config})
+        return self.validate(data)

@@ -6,13 +6,14 @@ import logging
 from typing import Any, Dict, List, Optional, Union
 
 import yaml
-from jsonschema import validate
 
 from .api import APIError, CatchpointAPI
 from .config import ConfigValidator
+from .exceptions import ValidationError
 from .utils import load_yaml, save_yaml
 
 logger = logging.getLogger(__name__)
+
 
 class CatchpointConfigurator:
     """Main class for managing Catchpoint configurations."""
@@ -42,9 +43,25 @@ class CatchpointConfigurator:
             timeout=timeout,
             debug=debug,
         )
-        
+
         if debug:
             logging.basicConfig(level=logging.DEBUG)
+
+    def validate(self, config: Union[str, Dict[str, Any]]) -> bool:
+        """Validate a configuration.
+
+        Args:
+            config: Configuration dictionary or path to YAML file
+
+        Returns:
+            True if validation succeeds
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if isinstance(config, str):
+            config = load_yaml(config)
+        return self.validator.validate(config)
 
     def deploy(
         self,
@@ -69,7 +86,7 @@ class CatchpointConfigurator:
             DeploymentError: If deployment fails
         """
         config = load_yaml(config_path)
-        self.validator.validate(config)
+        self.validate(config)
 
         if dry_run:
             return {"status": "validated", "config": config}
@@ -79,15 +96,17 @@ class CatchpointConfigurator:
                 # Check if test exists
                 existing_tests = self.api.list_tests({"name": config["name"]})
                 if existing_tests and not force:
-                    raise ValueError(f"Test '{config['name']}' already exists. Use --force to overwrite.")
-                
+                    raise ValidationError(
+                        f"Test '{config['name']}' already exists. Use --force to overwrite."
+                    )
+
                 if existing_tests:
                     result = self.api.update_test(existing_tests[0]["id"], config)
                     action = "updated"
                 else:
                     result = self.api.create_test(config)
                     action = "created"
-                
+
                 return {
                     "status": "success",
                     "action": action,
@@ -99,15 +118,19 @@ class CatchpointConfigurator:
                 # Check if dashboard exists
                 existing_dashboards = self.api.list_dashboards({"name": config["name"]})
                 if existing_dashboards and not force:
-                    raise ValueError(f"Dashboard '{config['name']}' already exists. Use --force to overwrite.")
-                
+                    raise ValidationError(
+                        f"Dashboard '{config['name']}' already exists. Use --force to overwrite."
+                    )
+
                 if existing_dashboards:
-                    result = self.api.update_dashboard(existing_dashboards[0]["id"], config)
+                    result = self.api.update_dashboard(
+                        existing_dashboards[0]["id"], config
+                    )
                     action = "updated"
                 else:
                     result = self.api.create_dashboard(config)
                     action = "created"
-                
+
                 return {
                     "status": "success",
                     "action": action,
@@ -116,26 +139,10 @@ class CatchpointConfigurator:
                 }
 
             else:
-                raise ValueError(f"Unknown configuration type: {config['type']}")
+                raise ValidationError(f"Unknown configuration type: {config['type']}")
 
         except APIError as e:
             raise DeploymentError(f"Failed to deploy configuration: {e}")
-
-    def validate(self, config_path: str) -> bool:
-        """Validate a configuration file.
-
-        Args:
-            config_path: Path to the configuration file
-
-        Returns:
-            True if validation succeeds
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        config = load_yaml(config_path)
-        self.validator.validate(config)
-        return True
 
     def list(self, config_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """List existing configurations.
@@ -193,10 +200,10 @@ class CatchpointConfigurator:
         """
         # TODO: Implement template logic
         config = {}
-        
+
         if output_path:
             save_yaml(config, output_path)
-            
+
         return config
 
     def update(
@@ -221,7 +228,7 @@ class CatchpointConfigurator:
         """
         config = load_yaml(config_path)
         config.update(updates)
-        self.validator.validate(config)
+        self.validate(config)
 
         if dry_run:
             return {"status": "validated", "config": config}
@@ -230,15 +237,15 @@ class CatchpointConfigurator:
             if config["type"] == "test":
                 existing_tests = self.api.list_tests({"name": config["name"]})
                 if not existing_tests:
-                    raise ValueError(f"Test '{config['name']}' not found")
+                    raise ValidationError(f"Test '{config['name']}' not found")
                 result = self.api.update_test(existing_tests[0]["id"], config)
             elif config["type"] == "dashboard":
                 existing_dashboards = self.api.list_dashboards({"name": config["name"]})
                 if not existing_dashboards:
-                    raise ValueError(f"Dashboard '{config['name']}' not found")
+                    raise ValidationError(f"Dashboard '{config['name']}' not found")
                 result = self.api.update_dashboard(existing_dashboards[0]["id"], config)
             else:
-                raise ValueError(f"Unknown configuration type: {config['type']}")
+                raise ValidationError(f"Unknown configuration type: {config['type']}")
 
             return {
                 "status": "success",
@@ -268,7 +275,7 @@ class CatchpointConfigurator:
             DeletionError: If deletion fails
         """
         config = load_yaml(config_path)
-        self.validator.validate(config)
+        self.validate(config)
 
         if dry_run:
             return {"status": "would_delete", "path": config_path}
@@ -277,15 +284,15 @@ class CatchpointConfigurator:
             if config["type"] == "test":
                 existing_tests = self.api.list_tests({"name": config["name"]})
                 if not existing_tests:
-                    raise ValueError(f"Test '{config['name']}' not found")
+                    raise ValidationError(f"Test '{config['name']}' not found")
                 self.api.delete_test(existing_tests[0]["id"])
             elif config["type"] == "dashboard":
                 existing_dashboards = self.api.list_dashboards({"name": config["name"]})
                 if not existing_dashboards:
-                    raise ValueError(f"Dashboard '{config['name']}' not found")
+                    raise ValidationError(f"Dashboard '{config['name']}' not found")
                 self.api.delete_dashboard(existing_dashboards[0]["id"])
             else:
-                raise ValueError(f"Unknown configuration type: {config['type']}")
+                raise ValidationError(f"Unknown configuration type: {config['type']}")
 
             return {
                 "status": "success",
@@ -316,7 +323,7 @@ class CatchpointConfigurator:
             ExportError: If export fails
         """
         config = load_yaml(config_path)
-        
+
         if format == "json":
             output = config
         else:
@@ -353,22 +360,25 @@ class CatchpointConfigurator:
         else:
             config = load_yaml(import_path)
 
-        self.validator.validate(config)
+        self.validate(config)
 
         if output_path:
             save_yaml(config, output_path)
 
         return config
 
+
 class DeploymentError(Exception):
     """Raised when deployment fails."""
 
     pass
 
+
 class UpdateError(Exception):
     """Raised when update fails."""
 
     pass
+
 
 class DeletionError(Exception):
     """Raised when deletion fails."""

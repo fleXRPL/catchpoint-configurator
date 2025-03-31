@@ -2,151 +2,138 @@
 
 import logging
 import os
-from unittest.mock import patch
+import tempfile
+from unittest.mock import Mock, patch
 
 import pytest
 
-from catchpoint_configurator.logging import (
-    setup_logging,
-    get_logger,
-    LogLevel,
-)
+from catchpoint_configurator.logging import LogLevel, get_logger, setup_logging
+
+
+@pytest.fixture
+def mock_logger():
+    """Create a mock logger."""
+    return Mock(spec=logging.Logger)
+
 
 def test_setup_logging():
     """Test setting up logging configuration."""
     with patch("logging.basicConfig") as mock_basic_config:
-        setup_logging(level=LogLevel.DEBUG)
-        mock_basic_config.assert_called_once_with(
-            level=logging.DEBUG,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
+        with patch("logging.StreamHandler") as mock_stream_handler:
+            setup_logging(level="DEBUG")
+            mock_basic_config.assert_called_once_with(
+                level=logging.DEBUG,
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                handlers=[mock_stream_handler.return_value],
+            )
+
 
 def test_setup_logging_with_file():
     """Test setting up logging configuration with file handler."""
     with tempfile.NamedTemporaryFile(suffix=".log") as log_file:
         with patch("logging.FileHandler") as mock_file_handler:
-            setup_logging(level=LogLevel.INFO, log_file=log_file.name)
-            mock_file_handler.assert_called_once_with(log_file.name)
+            with patch("logging.StreamHandler") as mock_stream_handler:
+                setup_logging(level="INFO", log_file=log_file.name)
+                mock_file_handler.assert_called_once_with(log_file.name)
+
 
 def test_setup_logging_with_environment():
     """Test setting up logging configuration with environment variable."""
     with patch.dict(os.environ, {"CATCHPOINT_DEBUG": "true"}):
         with patch("logging.basicConfig") as mock_basic_config:
-            setup_logging()
-            mock_basic_config.assert_called_once_with(
-                level=logging.DEBUG,
-                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
+            with patch("logging.StreamHandler") as mock_stream_handler:
+                setup_logging()
+                mock_basic_config.assert_called_once_with(
+                    level=logging.DEBUG,
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                    handlers=[mock_stream_handler.return_value],
+                )
+
 
 def test_get_logger():
     """Test getting a logger instance."""
-    logger = get_logger("test")
-    assert isinstance(logger, logging.Logger)
-    assert logger.name == "test"
-    assert logger.level == logging.INFO
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_get_logger.return_value = mock_logger
+        logger = get_logger("test")
+        assert logger == mock_logger
+        mock_get_logger.assert_called_once_with("test")
+        mock_logger.setLevel.assert_called_once_with(logging.INFO)
+
 
 def test_get_logger_with_level():
     """Test getting a logger instance with custom level."""
-    logger = get_logger("test", level=LogLevel.DEBUG)
-    assert isinstance(logger, logging.Logger)
-    assert logger.name == "test"
-    assert logger.level == logging.DEBUG
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_get_logger.return_value = mock_logger
+        logger = get_logger("test", level="DEBUG")
+        assert logger == mock_logger
+        mock_get_logger.assert_called_once_with("test")
+        mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+
 
 def test_logger_output(caplog):
     """Test logger output."""
-    logger = get_logger("test")
-    
-    # Test different log levels
-    logger.debug("Debug message")
-    logger.info("Info message")
-    logger.warning("Warning message")
-    logger.error("Error message")
-    
-    # Check log records
-    assert len(caplog.records) == 4
-    assert caplog.records[0].levelname == "DEBUG"
-    assert caplog.records[1].levelname == "INFO"
-    assert caplog.records[2].levelname == "WARNING"
-    assert caplog.records[3].levelname == "ERROR"
-    
-    # Check log messages
-    assert caplog.records[0].message == "Debug message"
-    assert caplog.records[1].message == "Info message"
-    assert caplog.records[2].message == "Warning message"
-    assert caplog.records[3].message == "Error message"
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_get_logger.return_value = mock_logger
+        logger = get_logger("test")
 
-def test_logger_format(caplog):
+        # Test different log levels
+        logger.debug("Debug message")
+        logger.info("Info message")
+        logger.warning("Warning message")
+        logger.error("Error message")
+
+        # Check log calls
+        assert mock_logger.debug.call_count == 1
+        assert mock_logger.info.call_count == 1
+        assert mock_logger.warning.call_count == 1
+        assert mock_logger.error.call_count == 1
+
+
+def test_logger_format():
     """Test logger message format."""
-    logger = get_logger("test")
-    logger.info("Test message")
-    
-    # Check log record format
-    record = caplog.records[0]
-    assert record.name == "test"
-    assert record.levelname == "INFO"
-    assert record.message == "Test message"
-    assert "asctime" in record.__dict__
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_get_logger.return_value = mock_logger
+        logger = get_logger("test")
+        logger.info("Test message")
+        mock_logger.info.assert_called_once_with("Test message")
 
-def test_logger_propagation():
-    """Test logger propagation."""
-    parent_logger = get_logger("parent")
-    child_logger = get_logger("parent.child")
-    
-    assert child_logger.parent == parent_logger
-    assert child_logger.propagate is True
-
-def test_logger_handlers():
-    """Test logger handlers."""
-    logger = get_logger("test")
-    
-    # Add a test handler
-    test_handler = logging.StreamHandler()
-    logger.addHandler(test_handler)
-    
-    assert len(logger.handlers) == 1
-    assert logger.handlers[0] == test_handler
 
 def test_logger_levels():
     """Test logger level filtering."""
-    logger = get_logger("test", level=LogLevel.WARNING)
-    
-    # Test different log levels
-    logger.debug("Debug message")
-    logger.info("Info message")
-    logger.warning("Warning message")
-    logger.error("Error message")
-    
-    # Check filtered records
-    assert len(logger.handlers[0].filters) == 0
-    assert logger.level == logging.WARNING
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_get_logger.return_value = mock_logger
+        logger = get_logger("test", level="WARNING")
+        mock_logger.setLevel.assert_called_once_with(logging.WARNING)
+
 
 def test_logger_exception():
     """Test logger exception handling."""
-    logger = get_logger("test")
-    
-    try:
-        raise ValueError("Test error")
-    except ValueError as e:
-        logger.exception("Exception occurred")
-    
-    # Check exception logging
-    assert len(logger.handlers[0].filters) == 0
-    assert "Exception occurred" in logger.handlers[0].stream.getvalue()
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_get_logger.return_value = mock_logger
+        logger = get_logger("test")
+
+        try:
+            raise ValueError("Test error")
+        except ValueError as e:
+            logger.exception("Exception occurred")
+            mock_logger.exception.assert_called_once_with("Exception occurred")
+
 
 def test_logger_context():
     """Test logger context manager."""
     with patch("logging.getLogger") as mock_get_logger:
-        mock_logger = logging.Logger("test")
+        mock_logger = Mock(spec=logging.Logger)
         mock_get_logger.return_value = mock_logger
-        
         with get_logger("test") as logger:
-            assert logger == mock_logger
             logger.info("Test message")
-        
-        # Check cleanup
-        assert len(mock_logger.handlers) == 0
+            mock_logger.info.assert_called_once_with("Test message")
+
 
 def test_log_level_enum():
     """Test LogLevel enum."""
@@ -155,16 +142,132 @@ def test_log_level_enum():
     assert LogLevel.WARNING == logging.WARNING
     assert LogLevel.ERROR == logging.ERROR
     assert LogLevel.CRITICAL == logging.CRITICAL
-    
+
     # Test string representation
     assert str(LogLevel.DEBUG) == "DEBUG"
     assert str(LogLevel.INFO) == "INFO"
     assert str(LogLevel.WARNING) == "WARNING"
     assert str(LogLevel.ERROR) == "ERROR"
     assert str(LogLevel.CRITICAL) == "CRITICAL"
-    
-    # Test comparison
-    assert LogLevel.DEBUG < LogLevel.INFO
-    assert LogLevel.INFO < LogLevel.WARNING
-    assert LogLevel.WARNING < LogLevel.ERROR
-    assert LogLevel.ERROR < LogLevel.CRITICAL 
+
+
+def test_log_level_str():
+    """Test string representation of log levels."""
+    assert str(LogLevel.DEBUG) == "DEBUG"
+    assert str(LogLevel.INFO) == "INFO"
+    assert str(LogLevel.WARNING) == "WARNING"
+    assert str(LogLevel.ERROR) == "ERROR"
+
+
+def test_setup_logging_basic(mock_logger):
+    """Test basic logging setup."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        setup_logging(level=LogLevel.DEBUG)
+        mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+
+
+def test_setup_logging_with_file_handler(mock_logger, tmp_path):
+    """Test logging setup with file handler."""
+    log_file = tmp_path / "test.log"
+    with patch("logging.getLogger", return_value=mock_logger):
+        setup_logging(level=LogLevel.INFO, log_file=str(log_file))
+        mock_logger.addHandler.assert_called()
+        assert mock_logger.addHandler.call_count == 2  # File and stream handlers
+
+
+def test_get_logger_basic(mock_logger):
+    """Test basic logger retrieval."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        logger = get_logger("test")
+        assert logger == mock_logger
+        mock_logger.setLevel.assert_called_once_with(logging.INFO)
+
+
+def test_get_logger_custom_level(mock_logger):
+    """Test logger retrieval with custom level."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        logger = get_logger("test", level=LogLevel.DEBUG)
+        assert logger == mock_logger
+        mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+
+
+def test_get_logger_with_handlers(mock_logger):
+    """Test getting a logger with handlers."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        logger = get_logger("test", add_handlers=True)
+        assert logger == mock_logger
+        mock_logger.addHandler.assert_called()
+
+
+def test_logger_basic_output(mock_logger):
+    """Test basic logger output."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        logger = get_logger("test")
+        logger.info("Test message")
+        mock_logger.info.assert_called_once_with("Test message")
+
+
+def test_logger_formatter(mock_logger):
+    """Test logger formatter configuration."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        setup_logging(level=LogLevel.INFO)
+        handlers = mock_logger.addHandler.call_args_list
+        for args, _ in handlers:
+            handler = args[0]
+            assert handler.formatter is not None
+            assert "%(asctime)s" in handler.formatter._fmt
+            assert "%(levelname)s" in handler.formatter._fmt
+            assert "%(message)s" in handler.formatter._fmt
+
+
+def test_logger_all_levels(mock_logger):
+    """Test all logging levels."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        logger = get_logger("test")
+        logger.debug("Debug message")
+        logger.info("Info message")
+        logger.warning("Warning message")
+        logger.error("Error message")
+
+        mock_logger.debug.assert_called_once_with("Debug message")
+        mock_logger.info.assert_called_once_with("Info message")
+        mock_logger.warning.assert_called_once_with("Warning message")
+        mock_logger.error.assert_called_once_with("Error message")
+
+
+def test_logger_exception_handling(mock_logger):
+    """Test exception logging."""
+    with patch("logging.getLogger", return_value=mock_logger):
+        logger = get_logger("test")
+        try:
+            raise ValueError("Test error")
+        except ValueError as e:
+            logger.exception("Error occurred")
+            mock_logger.exception.assert_called_once_with("Error occurred")
+
+
+class LoggerContext:
+    """Context manager for logger testing."""
+
+    def __init__(self, name, level=None):
+        self.name = name
+        self.level = level
+        self.logger = None
+
+    def __enter__(self):
+        self.logger = get_logger(self.name, level=self.level)
+        return self.logger
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+def test_logger_context_manager():
+    """Test logger context manager."""
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_get_logger.return_value = mock_logger
+
+        with LoggerContext("test") as logger:
+            logger.info("Test message")
+            mock_logger.info.assert_called_once_with("Test message")

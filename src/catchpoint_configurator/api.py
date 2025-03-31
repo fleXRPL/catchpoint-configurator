@@ -4,12 +4,13 @@ Catchpoint API client for interacting with the Catchpoint API.
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import requests
 from requests.exceptions import RequestException
 
 logger = logging.getLogger(__name__)
+
 
 class CatchpointAPIError(Exception):
     """Base exception for Catchpoint API errors."""
@@ -24,20 +25,24 @@ class CatchpointAPIError(Exception):
         super().__init__(message)
         self.status_code = status_code
 
+
 class AuthenticationError(CatchpointAPIError):
     """Raised when authentication fails."""
 
     pass
+
 
 class RateLimitError(CatchpointAPIError):
     """Raised when rate limit is exceeded."""
 
     pass
 
+
 class APIError(CatchpointAPIError):
     """Raised for general API errors."""
 
     pass
+
 
 class CatchpointAPI:
     """Client for interacting with the Catchpoint API."""
@@ -92,7 +97,9 @@ class CatchpointAPI:
             response.raise_for_status()
             data = response.json()
             self._token = data["access_token"]
-            self._token_expiry = time.time() + data["expires_in"] - 60  # Buffer of 60 seconds
+            self._token_expiry = (
+                time.time() + data["expires_in"] - 60
+            )  # Buffer of 60 seconds
             return self._token
         except RequestException as e:
             raise AuthenticationError(f"Failed to get access token: {e}")
@@ -187,7 +194,9 @@ class CatchpointAPI:
         """
         return self._request("GET", f"/tests/{test_id}")
 
-    def list_tests(self, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def list_tests(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """List all tests.
 
         Args:
@@ -222,7 +231,9 @@ class CatchpointAPI:
         Returns:
             Updated dashboard data
         """
-        return self._request("PUT", f"/dashboards/{dashboard_id}", data=dashboard_config)
+        return self._request(
+            "PUT", f"/dashboards/{dashboard_id}", data=dashboard_config
+        )
 
     def delete_dashboard(self, dashboard_id: str) -> None:
         """Delete a dashboard.
@@ -243,7 +254,9 @@ class CatchpointAPI:
         """
         return self._request("GET", f"/dashboards/{dashboard_id}")
 
-    def list_dashboards(self, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def list_dashboards(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """List all dashboards.
 
         Args:
@@ -279,4 +292,4 @@ class CatchpointAPI:
         Returns:
             Test status data
         """
-        return self._request("GET", f"/tests/{test_id}/status") 
+        return self._request("GET", f"/tests/{test_id}/status")
