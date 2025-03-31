@@ -46,7 +46,6 @@ dev = [
     "mypy>=0.950",
     "pylint>=2.17.0",
     "bandit>=1.7.0",
-    "pre-commit>=2.17.0",
 ]
 
 [project.urls]
@@ -89,7 +88,6 @@ warn_unreachable = true
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --cov=catchpoint_configurator --cov-report=xml --cov-report=term-missing --cov-fail-under=75"
-
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

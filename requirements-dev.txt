@@ -21,5 +21,4 @@ mkdocs-material>=9.0.0
 mkdocstrings>=0.20.0
 
 # Development tools
-pre-commit>=3.0.0
 bump2version>=1.0.0 
