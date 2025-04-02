@@ -123,9 +123,7 @@ class CatchpointConfigurator:
                     )
 
                 if existing_dashboards:
-                    result = self.api.update_dashboard(
-                        existing_dashboards[0]["id"], config
-                    )
+                    result = self.api.update_dashboard(existing_dashboards[0]["id"], config)
                     action = "updated"
                 else:
                     result = self.api.create_dashboard(config)

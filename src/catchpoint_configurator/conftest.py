@@ -167,9 +167,7 @@ class ContestManager:
         except Exception as e:
             raise ContestError(f"Failed to get contest results: {str(e)}")
 
-    def get_contest_leaderboard(
-        self, contest_id: str, limit: Optional[int] = None
-    ) -> List[Dict]:
+    def get_contest_leaderboard(self, contest_id: str, limit: Optional[int] = None) -> List[Dict]:
         """Get the leaderboard for a contest.
 
         Args:
@@ -188,9 +186,7 @@ class ContestManager:
                 params["limit"] = limit
 
             logger.info(f"Getting leaderboard for contest: {contest_id}")
-            response = self.api.get(
-                f"/contests/{contest_id}/leaderboard", params=params
-            )
+            response = self.api.get(f"/contests/{contest_id}/leaderboard", params=params)
             return response
         except Exception as e:
             raise ContestError(f"Failed to get contest leaderboard: {str(e)}")

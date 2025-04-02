@@ -199,9 +199,7 @@ class ContestManager:
         Returns:
             Contest results in specified format
         """
-        return self.api.get(
-            f"/contests/{contest_id}/results/export", params={"format": format}
-        )
+        return self.api.get(f"/contests/{contest_id}/results/export", params={"format": format})
 
     def import_contest_results(
         self, contest_id: str, results: List[Dict[str, Any]], format: str = "json"
@@ -228,9 +226,7 @@ class ContestManager:
         Returns:
             Contest analytics
         """
-        return self.api.get(
-            f"/contests/{contest_id}/analytics", params={"metric": metric}
-        )
+        return self.api.get(f"/contests/{contest_id}/analytics", params={"metric": metric})
 
     def get_contest_reports(self, contest_id: str, report_type: str) -> Dict[str, Any]:
         """Get contest reports.
@@ -242,6 +238,4 @@ class ContestManager:
         Returns:
             Contest reports
         """
-        return self.api.get(
-            f"/contests/{contest_id}/reports", params={"type": report_type}
-        )
+        return self.api.get(f"/contests/{contest_id}/reports", params={"type": report_type})

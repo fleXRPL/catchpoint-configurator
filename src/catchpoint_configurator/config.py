@@ -207,9 +207,7 @@ class ConfigValidator:
         required_fields = ["name", "type", "url", "frequency"]
         missing_fields = [field for field in required_fields if field not in config]
         if missing_fields:
-            raise ValidationError(
-                f"Missing required fields: {', '.join(missing_fields)}"
-            )
+            raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
 
         valid_types = ["web", "api", "transaction", "dns", "traceroute"]
         if config["type"] not in valid_types:
@@ -232,9 +230,7 @@ class ConfigValidator:
         required_fields = ["name", "metric", "operator", "threshold", "recipients"]
         missing_fields = [field for field in required_fields if field not in config]
         if missing_fields:
-            raise ValidationError(
-                f"Missing required fields: {', '.join(missing_fields)}"
-            )
+            raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
 
         valid_metrics = ["response_time", "availability", "throughput"]
         if config["metric"] not in valid_metrics:
@@ -265,9 +261,7 @@ class ConfigValidator:
         required_fields = ["name", "type", "layout"]
         missing_fields = [field for field in required_fields if field not in config]
         if missing_fields:
-            raise ValidationError(
-                f"Missing required fields: {', '.join(missing_fields)}"
-            )
+            raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
 
         if config["type"] != "dashboard":
             raise ValidationError(f"Invalid type: {config['type']}")
@@ -292,9 +286,7 @@ class ConfigValidator:
         required_fields = ["type", "title", "test_id"]
         missing_fields = [field for field in required_fields if field not in config]
         if missing_fields:
-            raise ValidationError(
-                f"Missing required fields: {', '.join(missing_fields)}"
-            )
+            raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
 
         valid_types = ["chart", "table", "gauge"]
         if config["type"] not in valid_types:

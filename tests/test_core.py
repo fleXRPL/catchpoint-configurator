@@ -25,9 +25,7 @@ def mock_api():
 @pytest.fixture
 def configurator(mock_api):
     with patch("catchpoint_configurator.core.CatchpointAPI", return_value=mock_api):
-        return CatchpointConfigurator(
-            client_id="test_client", client_secret="test_secret"
-        )
+        return CatchpointConfigurator(client_id="test_client", client_secret="test_secret")
 
 
 @pytest.fixture
@@ -82,9 +80,7 @@ def test_deploy_test(configurator, test_config, mock_api):
 
 def test_deploy_existing_test(configurator, test_config, mock_api):
     """Test deploying an existing test."""
-    mock_api.list_tests.return_value = [
-        {"id": "existing_test", "name": test_config["name"]}
-    ]
+    mock_api.list_tests.return_value = [{"id": "existing_test", "name": test_config["name"]}]
     mock_api.update_test.return_value = {
         "id": "existing_test",
         "name": test_config["name"],

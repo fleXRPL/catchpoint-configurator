@@ -28,9 +28,7 @@ def get_logger(name: str, level: str = "INFO") -> logging.Logger:
 
     if not logger.handlers:
         handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -229,9 +227,7 @@ def validate_environment() -> None:
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
 
     if missing_vars:
-        raise EnvironmentError(
-            f"Missing required environment variables: {', '.join(missing_vars)}"
-        )
+        raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 
 def sanitize_string(value: str) -> str:

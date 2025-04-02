@@ -81,9 +81,7 @@ def _get_log_level(level: Union[str, LogLevel, None]) -> LogLevel:
     raise ValueError(f"Invalid log level type: {type(level)}")
 
 
-def setup_logging(
-    level: Union[str, LogLevel] = LogLevel.INFO, log_file: str = None
-) -> None:
+def setup_logging(level: Union[str, LogLevel] = LogLevel.INFO, log_file: str = None) -> None:
     """Set up logging configuration.
 
     Args:
@@ -122,9 +120,7 @@ def setup_logging(
     )
 
 
-def get_logger(
-    name: str, level: Union[str, LogLevel] = LogLevel.INFO
-) -> logging.Logger:
+def get_logger(name: str, level: Union[str, LogLevel] = LogLevel.INFO) -> logging.Logger:
     """Get a logger instance.
 
     Args:

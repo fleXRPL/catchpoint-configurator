@@ -49,9 +49,7 @@ def test_create_contest(contest_manager, contest_config):
 
     # Verify
     assert result == expected_response
-    contest_manager.api.post.assert_called_once_with(
-        "/contests", json=contest_config.dict()
-    )
+    contest_manager.api.post.assert_called_once_with("/contests", json=contest_config.dict())
 
 
 def test_create_contest_error(contest_manager, contest_config):
@@ -107,9 +105,7 @@ def test_list_contests_with_filters(contest_manager):
     contest_manager.api.get.return_value = expected_response
 
     # Execute
-    result = contest_manager.list_contests(
-        status=status, start_date=start_date, end_date=end_date
-    )
+    result = contest_manager.list_contests(status=status, start_date=start_date, end_date=end_date)
 
     # Verify
     assert result == expected_response
@@ -171,9 +167,7 @@ def test_get_contest_results(contest_manager):
     # Verify
     assert len(result) == 1
     assert isinstance(result[0], ContestResult)
-    contest_manager.api.get.assert_called_once_with(
-        f"/contests/{contest_id}/results", params={}
-    )
+    contest_manager.api.get.assert_called_once_with(f"/contests/{contest_id}/results", params={})
 
 
 def test_get_contest_leaderboard(contest_manager):
@@ -236,9 +230,7 @@ def test_import_contest_results(contest_manager):
     """Test importing contest results."""
     # Setup
     contest_id = "123"
-    results = [
-        {"timestamp": "2024-01-01T00:00:00", "metric": "response_time", "value": 100}
-    ]
+    results = [{"timestamp": "2024-01-01T00:00:00", "metric": "response_time", "value": 100}]
 
     # Execute
     contest_manager.import_contest_results(contest_id, results, format="json")
