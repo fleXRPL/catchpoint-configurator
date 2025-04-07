@@ -2,11 +2,11 @@
 
 from typing import FrozenSet
 
-# API constants
-API_BASE_URL = "https://api.catchpoint.com/v1"
-API_TOKEN_URL = f"{API_BASE_URL}/token"
-API_TEST_URL = f"{API_BASE_URL}/tests"
-API_DASHBOARD_URL = f"{API_BASE_URL}/dashboards"
+# API endpoints
+API_BASE_URL = "https://api.catchpoint.com/v2"
+API_TOKEN_URL = "https://api.catchpoint.com/v2/token"
+API_TEST_URL = "https://api.catchpoint.com/v2/tests"
+API_DASHBOARD_URL = "https://api.catchpoint.com/v2/dashboards"
 
 # Test types
 TEST_TYPE_WEB = "web"
@@ -109,11 +109,13 @@ VALID_RECIPIENT_TYPES: FrozenSet[str] = frozenset(
     ]
 )
 
-# File constants
+# File paths
 CONFIG_FILE = "catchpoint.yaml"
 LOG_FILE = "catchpoint.log"
+
+# Logging
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-LOG_LEVEL = 20  # logging.INFO
+LOG_LEVEL = "INFO"
 
 # Environment variables
 REQUIRED_VARS = [
@@ -130,11 +132,6 @@ MAX_FREQUENCY = 86400  # 24 hours
 DEFAULT_RETRIES = 3
 MIN_RETRIES = 1
 MAX_RETRIES = 5
-
-# Logging Settings
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-LOG_LEVEL = "INFO"
-LOG_FILE = "catchpoint_configurator.log"
 
 # File Settings
 TEMPLATE_DIR = "templates"
