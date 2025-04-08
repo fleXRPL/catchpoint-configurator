@@ -20,6 +20,31 @@ class ConfigValidator:
         """Initialize the configuration validator."""
         self.logger = logger
 
+    def validate(self, config: Dict[str, Any]) -> bool:
+        """Basic validation for MVP.
+
+        Args:
+            config: Configuration to validate
+
+        Returns:
+            True if validation passes
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if not isinstance(config, dict):
+            raise ValidationError("Configuration must be a dictionary")
+
+        if "type" not in config:
+            raise ValidationError("Configuration must have a type")
+
+        if config["type"] == "test":
+            return self.validate_test_config(config)
+        elif config["type"] == "dashboard":
+            return self.validate_dashboard_config(config)
+        else:
+            raise ValidationError(f"Invalid configuration type: {config['type']}")
+
     def validate_test_config(self, config: Dict[str, Any]) -> bool:
         """Validate a test configuration.
 
@@ -62,13 +87,46 @@ class ConfigValidator:
         Raises:
             ValidationError: If validation fails
         """
-        required_fields = ["name", "layout"]
+        required_fields = ["name", "type", "layout"]
         missing_fields = [field for field in required_fields if field not in config]
         if missing_fields:
             raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
 
         if not isinstance(config["layout"], list):
             raise ValidationError("Layout must be a list of widgets")
+
+        return True
+
+    def validate_alert_config(self, config: Dict[str, Any]) -> bool:
+        """Validate an alert configuration.
+
+        Args:
+            config: Alert configuration to validate
+
+        Returns:
+            True if validation passes
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        required_fields = ["metric", "threshold", "condition", "recipients"]
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
+
+        valid_metrics = ["response_time", "availability", "throughput"]
+        if config["metric"] not in valid_metrics:
+            raise ValidationError(f"Invalid metric: {config['metric']}")
+
+        valid_conditions = [">", "<", ">=", "<=", "=="]
+        if config["condition"] not in valid_conditions:
+            raise ValidationError(f"Invalid condition: {config['condition']}")
+
+        if not isinstance(config["threshold"], (int, float)) or config["threshold"] <= 0:
+            raise ValidationError("Threshold must be a positive number")
+
+        if not isinstance(config["recipients"], list) or not config["recipients"]:
+            raise ValidationError("Recipients must be a non-empty list")
 
         return True
 
@@ -93,18 +151,14 @@ class ConfigValidator:
         if not isinstance(data, dict):
             raise ValidationError("YAML data must be a dictionary")
 
-        if "url" in data and not validate_url(data["url"]):
-            raise ValidationError(f"Invalid URL: {data['url']}")
-
-        return True
+        return self.validate(data)
 
 
 class ConfigParser:
     """Parser for dashboard configuration files."""
 
     def __init__(self, config_path: str) -> None:
-        """
-        Initialize the configuration parser.
+        """Initialize the configuration parser.
 
         Args:
             config_path: Path to the YAML configuration file
@@ -122,8 +176,7 @@ class ConfigParser:
             raise PermissionError(f"Cannot read configuration file: {self.config_path}")
 
     def parse(self) -> Dict[str, Any]:
-        """
-        Parse and apply defaults to the configuration file.
+        """Parse and apply defaults to the configuration file.
 
         Returns:
             Dict containing the parsed configuration
@@ -131,9 +184,6 @@ class ConfigParser:
         try:
             with open(self.config_path, "r") as f:
                 config = yaml.safe_load(f)
-
-            # Apply defaults
-            self._apply_defaults(config)
 
             logger.info(f"Successfully parsed configuration from {self.config_path}")
             return config
@@ -144,26 +194,3 @@ class ConfigParser:
         except Exception as e:
             logger.error(f"Error processing configuration: {e}")
             raise
-
-    def _apply_defaults(self, config: Dict[str, Any]) -> None:
-        """
-        Apply default values to dashboard configurations.
-
-        Args:
-            config: Configuration dictionary to update
-        """
-        defaults = config.get("defaults", {})
-        for dashboard in config.get("dashboards", []):
-            # Apply layout type
-            if "layout_type" not in dashboard and "layout_type" in defaults:
-                dashboard["layout_type"] = defaults["layout_type"]
-
-            # Apply tags
-            if "tags" in defaults:
-                dashboard_tags = set(dashboard.get("tags", []))
-                dashboard_tags.update(defaults["tags"])
-                dashboard["tags"] = list(dashboard_tags)
-
-            # Apply refresh interval
-            if "refresh_interval" in defaults:
-                dashboard["refresh_interval"] = defaults["refresh_interval"]

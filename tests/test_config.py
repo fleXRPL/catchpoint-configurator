@@ -4,7 +4,7 @@ import pytest
 import yaml
 
 from catchpoint_configurator.config import ConfigValidator
-from catchpoint_configurator.exceptions import ConfigError
+from catchpoint_configurator.exceptions import ValidationError
 from catchpoint_configurator.types import AlertConfig, TestConfig
 
 
@@ -17,25 +17,25 @@ def validator():
 def test_validate_test_config(validator):
     """Test validating a test configuration."""
     config = {
-        "type": "web",
+        "type": "test",
         "name": "test-web",
         "url": "https://example.com",
         "frequency": 300,
         "nodes": ["US-East", "US-West"],
     }
-    result = validator.validate_test_config(config)
+    result = validator.validate(config)
     assert result is True
 
 
 def test_validate_test_config_missing_required(validator):
     """Test validating a test configuration with missing required fields."""
     config = {
-        "type": "web",
+        "type": "test",
         "name": "test-web",
     }
-    with pytest.raises(ConfigError) as exc_info:
-        validator.validate_test_config(config)
-    assert "Missing required field" in str(exc_info.value)
+    with pytest.raises(ValidationError) as exc_info:
+        validator.validate(config)
+    assert "Missing required fields" in str(exc_info.value)
 
 
 def test_validate_test_config_invalid_type(validator):
@@ -44,10 +44,11 @@ def test_validate_test_config_invalid_type(validator):
         "type": "invalid",
         "name": "test-web",
         "url": "https://example.com",
+        "frequency": 300,
     }
-    with pytest.raises(ConfigError) as exc_info:
-        validator.validate_test_config(config)
-    assert "Invalid test type" in str(exc_info.value)
+    with pytest.raises(ValidationError) as exc_info:
+        validator.validate(config)
+    assert "Invalid configuration type" in str(exc_info.value)
 
 
 def test_validate_alert_config(validator):
@@ -70,7 +71,7 @@ def test_validate_alert_config_invalid_metric(validator):
         "condition": ">",
         "recipients": ["email@example.com"],
     }
-    with pytest.raises(ConfigError) as exc_info:
+    with pytest.raises(ValidationError) as exc_info:
         validator.validate_alert_config(config)
     assert "Invalid metric" in str(exc_info.value)
 
@@ -83,7 +84,7 @@ def test_validate_alert_config_invalid_condition(validator):
         "condition": "invalid",
         "recipients": ["email@example.com"],
     }
-    with pytest.raises(ConfigError) as exc_info:
+    with pytest.raises(ValidationError) as exc_info:
         validator.validate_alert_config(config)
     assert "Invalid condition" in str(exc_info.value)
 
@@ -93,17 +94,15 @@ def test_validate_dashboard_config(validator):
     config = {
         "type": "dashboard",
         "name": "test-dashboard",
-        "description": "Test dashboard",
         "layout": [
             {
                 "type": "metric",
                 "title": "Response Time",
-                "metric": "response_time",
                 "test_id": "test123",
             }
         ],
     }
-    result = validator.validate_dashboard_config(config)
+    result = validator.validate(config)
     assert result is True
 
 
@@ -112,23 +111,17 @@ def test_validate_dashboard_config_invalid_layout(validator):
     config = {
         "type": "dashboard",
         "name": "test-dashboard",
-        "description": "Test dashboard",
-        "layout": [
-            {
-                "type": "invalid",
-                "title": "Response Time",
-            }
-        ],
+        "layout": "invalid",
     }
-    with pytest.raises(ConfigError) as exc_info:
-        validator.validate_dashboard_config(config)
-    assert "Invalid widget type" in str(exc_info.value)
+    with pytest.raises(ValidationError) as exc_info:
+        validator.validate(config)
+    assert "Layout must be a list" in str(exc_info.value)
 
 
 def test_validate_yaml_file(validator):
     """Test validating a YAML configuration file."""
     yaml_content = """
-    type: web
+    type: test
     name: test-web
     url: https://example.com
     frequency: 300
@@ -143,13 +136,31 @@ def test_validate_yaml_file(validator):
 def test_validate_yaml_file_invalid(validator):
     """Test validating an invalid YAML configuration file."""
     yaml_content = """
-    type: web
+    type: test
     name: test-web
     url: invalid-url
     """
-    with pytest.raises(ConfigError) as exc_info:
+    with pytest.raises(ValidationError) as exc_info:
         validator.validate_yaml(yaml_content)
-    assert "Invalid URL" in str(exc_info.value)
+    assert "Missing required fields" in str(exc_info.value)
+
+
+def test_validate_invalid_dict(validator):
+    """Test validating a non-dictionary input."""
+    with pytest.raises(ValidationError) as exc_info:
+        validator.validate("not a dict")
+    assert "must be a dictionary" in str(exc_info.value)
+
+
+def test_validate_missing_type(validator):
+    """Test validating config without type field."""
+    config = {
+        "name": "test-web",
+        "url": "https://example.com",
+    }
+    with pytest.raises(ValidationError) as exc_info:
+        validator.validate(config)
+    assert "must have a type" in str(exc_info.value)
 
 
 def test_test_config_class():

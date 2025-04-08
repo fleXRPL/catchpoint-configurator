@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Union
 from .api import CatchpointAPI
 from .config import ConfigValidator
 from .exceptions import APIError, ContestError
-from .types import TestConfig
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class ContestManager:
         self.api = api
         self.validator = ConfigValidator()
 
-    def create_contest(self, config: TestConfig) -> Dict[str, Any]:
+    def create_contest(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new test contest.
 
         Args:
@@ -37,13 +36,12 @@ class ContestManager:
             ContestError: If contest creation fails
             APIError: If the API request fails
         """
-        self.validator.validate_test_config(config)
-
         try:
+            self.validator.validate(config)
             return self.api.create_test(config)
         except Exception as e:
             logger.error(f"Failed to create contest: {e}")
-            raise ContestError(f"Failed to create contest: {e}")
+            raise ContestError(f"Failed to create contest: {str(e)}")
 
     def get_contest(self, contest_id: str) -> Dict[str, Any]:
         """Get contest details.
@@ -63,7 +61,7 @@ class ContestManager:
             logger.error(f"Failed to get contest {contest_id}: {e}")
             raise APIError(f"Failed to get contest {contest_id}: {e}")
 
-    def update_contest(self, contest_id: str, config: TestConfig) -> Dict[str, Any]:
+    def update_contest(self, contest_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """Update an existing contest.
 
         Args:
@@ -77,13 +75,12 @@ class ContestManager:
             ContestError: If contest update fails
             APIError: If the API request fails
         """
-        self.validator.validate_test_config(config)
-
         try:
+            self.validator.validate(config)
             return self.api.update_test(contest_id, config)
         except Exception as e:
             logger.error(f"Failed to update contest {contest_id}: {e}")
-            raise ContestError(f"Failed to update contest: {e}")
+            raise ContestError(f"Failed to update contest: {str(e)}")
 
     def delete_contest(self, contest_id: str) -> None:
         """Delete a contest.

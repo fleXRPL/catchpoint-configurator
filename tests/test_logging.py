@@ -3,7 +3,7 @@
 import logging
 import os
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -25,13 +25,19 @@ def mock_logger():
 def test_setup_logging():
     """Test setting up logging configuration."""
     with patch("logging.getLogger") as mock_get_logger:
-        mock_logger = Mock(spec=logging.Logger)
-        mock_logger.handlers = []
+        mock_logger = MagicMock()
         mock_get_logger.return_value = mock_logger
-        with patch("logging.StreamHandler") as mock_stream_handler:
-            setup_logging(level="DEBUG")
-            mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
-            mock_logger.addHandler.assert_called_once_with(mock_stream_handler.return_value)
+        setup_logging()
+        mock_logger.setLevel.assert_called_once_with(logging.INFO)
+
+
+def test_setup_logging_debug():
+    """Test setting up logging configuration in debug mode."""
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+        setup_logging(debug=True)
+        mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
 
 
 def test_setup_logging_with_file():
@@ -58,25 +64,24 @@ def test_setup_logging_with_environment():
 
 def test_get_logger():
     """Test getting a logger instance."""
-    with patch("logging.getLogger") as mock_get_logger:
-        mock_logger = Mock(spec=logging.Logger)
-        mock_logger.handlers = []
-        mock_get_logger.return_value = mock_logger
-        logger = get_logger("test")
-        assert logger == mock_logger
-        mock_get_logger.assert_called_once_with("test")
-        mock_logger.setLevel.assert_called_once_with(logging.INFO)
+    logger = get_logger(__name__)
+    assert isinstance(logger, logging.Logger)
+    assert logger.name == __name__
 
 
 def test_get_logger_with_level():
-    """Test getting a logger instance with custom level."""
-    with patch("logging.getLogger") as mock_get_logger:
-        mock_logger = Mock(spec=logging.Logger)
-        mock_get_logger.return_value = mock_logger
-        logger = get_logger("test", level="DEBUG")
-        assert logger == mock_logger
-        mock_get_logger.assert_called_once_with("test")
-        mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+    """Test getting a logger instance with specific level."""
+    logger = get_logger(__name__, level=logging.DEBUG)
+    assert isinstance(logger, logging.Logger)
+    assert logger.level == logging.DEBUG
+
+
+def test_get_logger_with_handler():
+    """Test getting a logger instance with a handler."""
+    handler = logging.StreamHandler()
+    logger = get_logger(__name__, handler=handler)
+    assert isinstance(logger, logging.Logger)
+    assert handler in logger.handlers
 
 
 def test_logger_output(caplog):
