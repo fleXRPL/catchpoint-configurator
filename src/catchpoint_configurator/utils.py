@@ -5,7 +5,7 @@ Utility functions for Catchpoint Configurator.
 import logging
 import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse
 
 import yaml
@@ -54,11 +54,11 @@ def get_env_var(name: str, required: bool = True) -> Optional[str]:
     return value
 
 
-def load_yaml(file_path: str) -> Dict[str, Any]:
-    """Load YAML file.
+def load_yaml(file_path: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """Load YAML file or return dictionary directly.
 
     Args:
-        file_path: Path to YAML file
+        file_path: Path to YAML file or dictionary to return directly
 
     Returns:
         YAML data as dictionary
@@ -67,13 +67,16 @@ def load_yaml(file_path: str) -> Dict[str, Any]:
         FileNotFoundError: If file does not exist
         yaml.YAMLError: If YAML is invalid
     """
+    if isinstance(file_path, dict):
+        return file_path
+
     try:
         with open(file_path, "r") as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
         raise FileNotFoundError(f"File not found: {file_path}")
     except yaml.YAMLError as e:
-        raise yaml.YAMLError(f"Invalid YAML in {file_path}: {e}")
+        raise yaml.YAMLError(f"Invalid YAML: {str(e)}")
 
 
 def save_yaml(data: Any, file_path: str) -> None:

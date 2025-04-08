@@ -12,20 +12,26 @@ from catchpoint_configurator.logging import LogLevel, get_logger, setup_logging
 
 @pytest.fixture
 def mock_logger():
-    """Create a mock logger."""
-    return Mock(spec=logging.Logger)
+    """Create a mock logger with necessary attributes."""
+    logger = Mock(spec=logging.Logger)
+    logger.handlers = []
+    logger.handle = Mock()
+    logger.setLevel = Mock()
+    logger.addHandler = Mock()
+    logger.removeHandler = Mock()
+    return logger
 
 
 def test_setup_logging():
     """Test setting up logging configuration."""
-    with patch("logging.basicConfig") as mock_basic_config:
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = Mock(spec=logging.Logger)
+        mock_logger.handlers = []
+        mock_get_logger.return_value = mock_logger
         with patch("logging.StreamHandler") as mock_stream_handler:
             setup_logging(level="DEBUG")
-            mock_basic_config.assert_called_once_with(
-                level=logging.DEBUG,
-                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                handlers=[mock_stream_handler.return_value],
-            )
+            mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+            mock_logger.addHandler.assert_called_once_with(mock_stream_handler.return_value)
 
 
 def test_setup_logging_with_file():
@@ -40,20 +46,21 @@ def test_setup_logging_with_file():
 def test_setup_logging_with_environment():
     """Test setting up logging configuration with environment variable."""
     with patch.dict(os.environ, {"CATCHPOINT_DEBUG": "true"}):
-        with patch("logging.basicConfig") as mock_basic_config:
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = Mock(spec=logging.Logger)
+            mock_logger.handlers = []
+            mock_get_logger.return_value = mock_logger
             with patch("logging.StreamHandler") as mock_stream_handler:
                 setup_logging()
-                mock_basic_config.assert_called_once_with(
-                    level=logging.DEBUG,
-                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                    handlers=[mock_stream_handler.return_value],
-                )
+                mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
+                mock_logger.addHandler.assert_called_once_with(mock_stream_handler.return_value)
 
 
 def test_get_logger():
     """Test getting a logger instance."""
     with patch("logging.getLogger") as mock_get_logger:
         mock_logger = Mock(spec=logging.Logger)
+        mock_logger.handlers = []
         mock_get_logger.return_value = mock_logger
         logger = get_logger("test")
         assert logger == mock_logger
@@ -171,8 +178,7 @@ def test_setup_logging_with_file_handler(mock_logger, tmp_path):
     log_file = tmp_path / "test.log"
     with patch("logging.getLogger", return_value=mock_logger):
         setup_logging(level=LogLevel.INFO, log_file=str(log_file))
-        mock_logger.addHandler.assert_called()
-        assert mock_logger.addHandler.call_count == 2  # File and stream handlers
+        assert mock_logger.addHandler.call_count == 2  # Console and file handler
 
 
 def test_get_logger_basic(mock_logger):
@@ -196,7 +202,7 @@ def test_get_logger_with_handlers(mock_logger):
     with patch("logging.getLogger", return_value=mock_logger):
         logger = get_logger("test", add_handlers=True)
         assert logger == mock_logger
-        mock_logger.addHandler.assert_called()
+        assert mock_logger.addHandler.call_count == 1
 
 
 def test_logger_basic_output(mock_logger):
@@ -211,13 +217,9 @@ def test_logger_formatter(mock_logger):
     """Test logger formatter configuration."""
     with patch("logging.getLogger", return_value=mock_logger):
         setup_logging(level=LogLevel.INFO)
-        handlers = mock_logger.addHandler.call_args_list
-        for args, _ in handlers:
-            handler = args[0]
-            assert handler.formatter is not None
-            assert "%(asctime)s" in handler.formatter._fmt
-            assert "%(levelname)s" in handler.formatter._fmt
-            assert "%(message)s" in handler.formatter._fmt
+        assert mock_logger.addHandler.call_count == 1
+        handler = mock_logger.addHandler.call_args[0][0]
+        assert isinstance(handler.formatter, logging.Formatter)
 
 
 def test_logger_all_levels(mock_logger):

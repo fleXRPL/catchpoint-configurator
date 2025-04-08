@@ -5,9 +5,9 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from .api import CatchpointAPI
-from .exceptions import APIError
+from .config import ConfigValidator
+from .exceptions import APIError, ContestError
 from .types import TestConfig
-from .validation import validate_test_config
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,7 @@ class ContestManager:
             api: CatchpointAPI instance
         """
         self.api = api
+        self.validator = ConfigValidator()
 
     def create_contest(self, config: TestConfig) -> Dict[str, Any]:
         """Create a new test contest.
@@ -33,15 +34,16 @@ class ContestManager:
             Created contest details
 
         Raises:
-            ValidationError: If the configuration is invalid
+            ContestError: If contest creation fails
             APIError: If the API request fails
         """
-        validate_test_config(config)
+        self.validator.validate_test_config(config)
 
         try:
             return self.api.create_test(config)
         except Exception as e:
-            raise APIError(f"Failed to create contest: {e}")
+            logger.error(f"Failed to create contest: {e}")
+            raise ContestError(f"Failed to create contest: {e}")
 
     def get_contest(self, contest_id: str) -> Dict[str, Any]:
         """Get contest details.
@@ -58,6 +60,7 @@ class ContestManager:
         try:
             return self.api.get_test(contest_id)
         except Exception as e:
+            logger.error(f"Failed to get contest {contest_id}: {e}")
             raise APIError(f"Failed to get contest {contest_id}: {e}")
 
     def update_contest(self, contest_id: str, config: TestConfig) -> Dict[str, Any]:
@@ -71,15 +74,16 @@ class ContestManager:
             Updated contest details
 
         Raises:
-            ValidationError: If the configuration is invalid
+            ContestError: If contest update fails
             APIError: If the API request fails
         """
-        validate_test_config(config)
+        self.validator.validate_test_config(config)
 
         try:
             return self.api.update_test(contest_id, config)
         except Exception as e:
-            raise APIError(f"Failed to update contest {contest_id}: {e}")
+            logger.error(f"Failed to update contest {contest_id}: {e}")
+            raise ContestError(f"Failed to update contest: {e}")
 
     def delete_contest(self, contest_id: str) -> None:
         """Delete a contest.
@@ -91,8 +95,9 @@ class ContestManager:
             APIError: If the API request fails
         """
         try:
-            self.api.delete_test(contest_id)
+            self.api.delete(f"/contests/{contest_id}")
         except Exception as e:
+            logger.error(f"Failed to delete contest {contest_id}: {e}")
             raise APIError(f"Failed to delete contest {contest_id}: {e}")
 
     def list_contests(
@@ -122,8 +127,9 @@ class ContestManager:
         if end_date:
             params["end_date"] = end_date.isoformat()
         try:
-            return self.api.list_tests(params)
+            return self.api.list_tests()
         except Exception as e:
+            logger.error(f"Failed to list contests: {e}")
             raise APIError(f"Failed to list contests: {e}")
 
     def enable_contest(self, contest_id: str) -> None:
@@ -162,8 +168,15 @@ class ContestManager:
 
         Returns:
             Contest results
+
+        Raises:
+            APIError: If API request fails
         """
-        return self.api.get(f"/contests/{contest_id}/results")
+        try:
+            return self.api.get(f"/contests/{contest_id}/results")
+        except Exception as e:
+            logger.error(f"Failed to get contest results for {contest_id}: {e}")
+            raise APIError(f"Failed to get contest results for {contest_id}: {e}")
 
     def get_contest_leaderboard(self, contest_id: str) -> List[Dict[str, Any]]:
         """Get contest leaderboard.
@@ -173,8 +186,15 @@ class ContestManager:
 
         Returns:
             Contest leaderboard
+
+        Raises:
+            APIError: If API request fails
         """
-        return self.api.get(f"/contests/{contest_id}/leaderboard")
+        try:
+            return self.api.get(f"/contests/{contest_id}/leaderboard", params={})
+        except Exception as e:
+            logger.error(f"Failed to get contest leaderboard for {contest_id}: {e}")
+            raise APIError(f"Failed to get contest leaderboard for {contest_id}: {e}")
 
     def get_contest_stats(self, contest_id: str) -> Dict[str, Any]:
         """Get contest statistics.
@@ -188,45 +208,75 @@ class ContestManager:
         return self.api.get(f"/contests/{contest_id}/stats")
 
     def export_contest_results(
-        self, contest_id: str, format: str = "json"
+        self, contest_id: str, format: str = "csv"
     ) -> Union[str, Dict[str, Any]]:
         """Export contest results.
 
         Args:
             contest_id: Contest ID
-            format: Export format (json or csv)
+            format: Export format (csv or json)
 
         Returns:
-            Contest results in specified format
+            Exported contest results
+
+        Raises:
+            APIError: If API request fails
         """
-        return self.api.get(f"/contests/{contest_id}/results/export", params={"format": format})
+        try:
+            return self.api.get(f"/contests/{contest_id}/export", params={"format": format})
+        except Exception as e:
+            logger.error(f"Failed to export contest results for {contest_id}: {e}")
+            raise APIError(f"Failed to export contest results for {contest_id}: {e}")
 
     def import_contest_results(
         self, contest_id: str, results: List[Dict[str, Any]], format: str = "json"
-    ) -> None:
+    ) -> Dict[str, Any]:
         """Import contest results.
 
         Args:
             contest_id: Contest ID
-            results: Contest results to import
-            format: Import format (json or csv)
-        """
-        self.api.post(
-            f"/contests/{contest_id}/results/import",
-            json={"results": results, "format": format},
-        )
+            results: Results to import
+            format: Import format (json)
 
-    def get_contest_analytics(self, contest_id: str, metric: str) -> Dict[str, Any]:
+        Returns:
+            Import status
+
+        Raises:
+            APIError: If API request fails
+        """
+        try:
+            return self.api.post(
+                f"/contests/{contest_id}/import",
+                json={"format": format, "results": results},
+            )
+        except Exception as e:
+            logger.error(f"Failed to import contest results for {contest_id}: {e}")
+            raise APIError(f"Failed to import contest results for {contest_id}: {e}")
+
+    def get_contest_analytics(
+        self, contest_id: str, metric: str, interval: str = "1h"
+    ) -> Dict[str, Any]:
         """Get contest analytics.
 
         Args:
             contest_id: Contest ID
             metric: Metric to analyze
+            interval: Time interval for analysis
 
         Returns:
             Contest analytics
+
+        Raises:
+            APIError: If API request fails
         """
-        return self.api.get(f"/contests/{contest_id}/analytics", params={"metric": metric})
+        try:
+            return self.api.get(
+                f"/contests/{contest_id}/analytics",
+                params={"metric": metric, "interval": interval},
+            )
+        except Exception as e:
+            logger.error(f"Failed to get contest analytics for {contest_id}: {e}")
+            raise APIError(f"Failed to get contest analytics for {contest_id}: {e}")
 
     def get_contest_reports(self, contest_id: str, report_type: str) -> Dict[str, Any]:
         """Get contest reports.

@@ -3,7 +3,7 @@
 import logging
 import os
 from enum import Enum
-from typing import Union
+from typing import Optional, Union
 
 
 class LogLevel(Enum):
@@ -81,30 +81,15 @@ def _get_log_level(level: Union[str, LogLevel, None]) -> LogLevel:
     raise ValueError(f"Invalid log level type: {type(level)}")
 
 
-def setup_logging(level: Union[str, LogLevel] = LogLevel.INFO, log_file: str = None) -> None:
+def setup_logging(
+    level: Union[str, LogLevel] = LogLevel.INFO, log_file: Optional[str] = None
+) -> None:
     """Set up logging configuration.
 
     Args:
         level: Log level to use (string or LogLevel enum)
         log_file: Optional log file path
     """
-    handlers = []
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-    handlers.append(console_handler)
-
-    # File handler if specified
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
-        handlers.append(file_handler)
-
     # Set log level from environment variable
     if os.environ.get("CATCHPOINT_DEBUG", "").lower() == "true":
         level = LogLevel.DEBUG
@@ -113,41 +98,75 @@ def setup_logging(level: Union[str, LogLevel] = LogLevel.INFO, log_file: str = N
     log_level = _get_log_level(level)
 
     # Configure root logger
-    logging.basicConfig(
-        level=log_level.value,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=handlers,
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level.value)
+
+    # Remove existing handlers
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     )
+    root_logger.addHandler(console_handler)
+
+    # File handler if specified
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
+        root_logger.addHandler(file_handler)
 
 
-def get_logger(name: str, level: Union[str, LogLevel] = LogLevel.INFO) -> logging.Logger:
+def get_logger(
+    name: str, level: Optional[Union[str, LogLevel]] = None, add_handlers: bool = False
+) -> logging.Logger:
     """Get a logger instance.
 
     Args:
         name: Logger name
-        level: Log level (string or LogLevel enum)
+        level: Optional log level (string or LogLevel enum)
+        add_handlers: Whether to add handlers to the logger
 
     Returns:
         Logger instance
     """
     logger = logging.getLogger(name)
-    log_level = _get_log_level(level)
-    logger.setLevel(log_level.value)
+
+    if level is not None:
+        log_level = _get_log_level(level)
+        logger.setLevel(log_level.value)
+
+    if add_handlers and not logger.handlers:
+        # Add console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
+        logger.addHandler(console_handler)
+
     return logger
 
 
 class LoggerContext:
     """Context manager for logger."""
 
-    def __init__(self, name: str, level: Union[str, LogLevel] = LogLevel.INFO):
+    def __init__(
+        self, name: str, level: Optional[Union[str, LogLevel]] = None, add_handlers: bool = False
+    ):
         """Initialize logger context.
 
         Args:
             name: Logger name
-            level: Log level (string or LogLevel enum)
+            level: Optional log level (string or LogLevel enum)
+            add_handlers: Whether to add handlers to the logger
         """
         self.name = name
         self.level = level
+        self.add_handlers = add_handlers
         self.logger = None
 
     def __enter__(self) -> logging.Logger:
@@ -156,7 +175,7 @@ class LoggerContext:
         Returns:
             Logger instance
         """
-        self.logger = get_logger(self.name, level=self.level)
+        self.logger = get_logger(self.name, level=self.level, add_handlers=self.add_handlers)
         return self.logger
 
     def __exit__(self, exc_type, exc_val, exc_tb):
