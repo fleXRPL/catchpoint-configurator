@@ -1,8 +1,9 @@
 """Tests for the core functionality."""
 
 import os
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from catchpoint_configurator.core import CatchpointConfigurator
 from catchpoint_configurator.exceptions import ValidationError
@@ -19,10 +20,7 @@ def configurator(mock_api):
     """Create a configurator instance with mock API."""
     with patch("catchpoint_configurator.core.CatchpointAPI") as mock_api_class:
         mock_api_class.return_value = mock_api
-        return CatchpointConfigurator(
-            client_id="test",
-            client_secret="test"
-        )
+        return CatchpointConfigurator(client_id="test", client_secret="test")
 
 
 @pytest.fixture
@@ -34,13 +32,15 @@ def test_config():
         "url": "https://example.com",
         "frequency": 300,
         "nodes": ["US-East", "US-West"],
-        "alerts": [{
-            "name": "High Response Time",
-            "metric": "response_time",
-            "operator": ">",
-            "threshold": 3000,
-            "recipients": [{"email": "test@example.com"}]
-        }]
+        "alerts": [
+            {
+                "name": "High Response Time",
+                "metric": "response_time",
+                "operator": ">",
+                "threshold": 3000,
+                "recipients": [{"email": "test@example.com"}],
+            }
+        ],
     }
 
 
@@ -48,6 +48,7 @@ def test_config():
 def test_config_file(test_config, tmp_path):
     """Create a temporary test config file."""
     import yaml
+
     config_file = tmp_path / "test_config.yaml"
     with open(config_file, "w") as f:
         yaml.dump(test_config, f)
@@ -69,7 +70,7 @@ def test_deploy_test(configurator, test_config_file, mock_api):
     """Test deploying a new test."""
     mock_api.list_tests.return_value = []  # No existing tests
     mock_api.create_test.return_value = {"id": "new_test", "name": "Test Web Monitor"}
-    
+
     result = configurator.deploy(test_config_file)
     assert result["status"] == "success"
     mock_api.create_test.assert_called_once()
@@ -79,7 +80,7 @@ def test_deploy_existing_test(configurator, test_config_file, mock_api):
     """Test deploying an existing test."""
     mock_api.list_tests.return_value = [{"id": "existing_test", "name": "Test Web Monitor"}]
     mock_api.update_test.return_value = {"id": "existing_test", "name": "Test Web Monitor"}
-    
+
     result = configurator.deploy(test_config_file, force=True)
     assert result["status"] == "success"
     mock_api.update_test.assert_called_once()
@@ -89,7 +90,7 @@ def test_list_tests(configurator, mock_api):
     """Test listing tests."""
     mock_api.list_tests.return_value = [
         {"id": "test1", "name": "Test 1"},
-        {"id": "test2", "name": "Test 2"}
+        {"id": "test2", "name": "Test 2"},
     ]
     result = configurator.list(config_type="test")
     assert len(result) == 2
@@ -99,7 +100,7 @@ def test_list_tests(configurator, mock_api):
 def test_delete_test(configurator, test_config_file, mock_api):
     """Test deleting a test."""
     mock_api.list_tests.return_value = [{"id": "test123", "name": "Test Web Monitor"}]
-    
+
     result = configurator.delete(test_config_file)
     assert result["status"] == "success"
     mock_api.delete_test.assert_called_once_with("test123")

@@ -112,11 +112,13 @@ def test_list_contests_with_filters(contest_manager):
 
     # Verify
     assert result == expected_response
-    contest_manager.api.list_tests.assert_called_once_with({
-        "status": status,
-        "start_date": start_date.isoformat(),
-        "end_date": end_date.isoformat(),
-    })
+    contest_manager.api.list_tests.assert_called_once_with(
+        {
+            "status": status,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+    )
 
 
 def test_update_contest(contest_manager, contest_config):

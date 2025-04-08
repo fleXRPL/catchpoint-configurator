@@ -1,8 +1,9 @@
 """Tests for the CLI interface."""
 
+from unittest.mock import Mock, patch
+
 import pytest
 from click.testing import CliRunner
-from unittest.mock import Mock, patch
 
 from catchpoint_configurator.cli import cli
 
@@ -29,14 +30,11 @@ def test_validate_command(runner, mock_configurator):
     with runner.isolated_filesystem():
         with open("test.yaml", "w") as f:
             f.write("test: data")
-        
+
         with patch("catchpoint_configurator.cli.get_client", return_value=mock_configurator):
-            result = runner.invoke(cli, [
-                "--client-id", "test",
-                "--client-secret", "test",
-                "validate",
-                "test.yaml"
-            ])
+            result = runner.invoke(
+                cli, ["--client-id", "test", "--client-secret", "test", "validate", "test.yaml"]
+            )
             assert result.exit_code == 0
             assert "Configuration is valid" in result.output
 
@@ -46,14 +44,11 @@ def test_deploy_command(runner, mock_configurator):
     with runner.isolated_filesystem():
         with open("test.yaml", "w") as f:
             f.write("test: data")
-        
+
         with patch("catchpoint_configurator.cli.get_client", return_value=mock_configurator):
-            result = runner.invoke(cli, [
-                "--client-id", "test",
-                "--client-secret", "test",
-                "deploy",
-                "test.yaml"
-            ])
+            result = runner.invoke(
+                cli, ["--client-id", "test", "--client-secret", "test", "deploy", "test.yaml"]
+            )
             assert result.exit_code == 0
             assert "Deployment result: {'status': 'success'}" in result.output
 
@@ -61,11 +56,7 @@ def test_deploy_command(runner, mock_configurator):
 def test_list_command(runner, mock_configurator):
     """Test the list command."""
     with patch("catchpoint_configurator.cli.get_client", return_value=mock_configurator):
-        result = runner.invoke(cli, [
-            "--client-id", "test",
-            "--client-secret", "test",
-            "list"
-        ])
+        result = runner.invoke(cli, ["--client-id", "test", "--client-secret", "test", "list"])
         assert result.exit_code == 0
         assert "Test 1 (test)" in result.output
 
