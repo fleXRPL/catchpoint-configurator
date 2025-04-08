@@ -5,7 +5,12 @@ import yaml
 
 from catchpoint_configurator.config import ConfigValidator
 from catchpoint_configurator.exceptions import ValidationError
-from catchpoint_configurator.types import AlertConfig, TestConfig
+from catchpoint_configurator.types import (
+    AlertConfig,
+    TestConfig,
+    to_test_config,
+    to_alert_config,
+)
 
 
 @pytest.fixture
@@ -22,6 +27,7 @@ def test_validate_test_config(validator):
         "url": "https://example.com",
         "frequency": 300,
         "nodes": ["US-East", "US-West"],
+        "alerts": [],
     }
     result = validator.validate(config)
     assert result is True
@@ -128,6 +134,7 @@ def test_validate_yaml_file(validator):
     nodes:
       - US-East
       - US-West
+    alerts: []
     """
     result = validator.validate_yaml(yaml_content)
     assert result is True
@@ -165,29 +172,33 @@ def test_validate_missing_type(validator):
 
 def test_test_config_class():
     """Test the TestConfig class."""
-    config = TestConfig(
-        type="web",
-        name="test-web",
-        url="https://example.com",
-        frequency=300,
-        nodes=["US-East", "US-West"],
-    )
-    assert config.type == "web"
-    assert config.name == "test-web"
-    assert config.url == "https://example.com"
-    assert config.frequency == 300
-    assert config.nodes == ["US-East", "US-West"]
+    config = {
+        "type": "web",
+        "name": "test-web",
+        "url": "https://example.com",
+        "frequency": 300,
+        "nodes": ["US-East", "US-West"],
+        "alerts": [],
+    }
+    test_config = to_test_config(config)
+    assert test_config["type"] == "web"
+    assert test_config["name"] == "test-web"
+    assert test_config["url"] == "https://example.com"
+    assert test_config["frequency"] == 300
+    assert test_config["nodes"] == ["US-East", "US-West"]
+    assert test_config["alerts"] == []
 
 
 def test_alert_config_class():
     """Test the AlertConfig class."""
-    config = AlertConfig(
-        metric="response_time",
-        threshold=3000,
-        condition=">",
-        recipients=["email@example.com"],
-    )
-    assert config.metric == "response_time"
-    assert config.threshold == 3000
-    assert config.condition == ">"
-    assert config.recipients == ["email@example.com"]
+    config = {
+        "metric": "response_time",
+        "threshold": 3000,
+        "condition": ">",
+        "recipients": ["email@example.com"],
+    }
+    alert_config = to_alert_config(config)
+    assert alert_config["metric"] == "response_time"
+    assert alert_config["threshold"] == 3000
+    assert alert_config["condition"] == ">"
+    assert alert_config["recipients"] == ["email@example.com"]

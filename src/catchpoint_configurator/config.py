@@ -38,12 +38,13 @@ class ConfigValidator:
         if "type" not in config:
             raise ValidationError("Configuration must have a type")
 
-        if config["type"] == "test":
+        config_type = config["type"]
+        if config_type in ["test", "web"]:
             return self.validate_test_config(config)
-        elif config["type"] == "dashboard":
+        elif config_type == "dashboard":
             return self.validate_dashboard_config(config)
         else:
-            raise ValidationError(f"Invalid configuration type: {config['type']}")
+            raise ValidationError(f"Invalid configuration type: {config_type}")
 
     def validate_test_config(self, config: Dict[str, Any]) -> bool:
         """Validate a test configuration.
