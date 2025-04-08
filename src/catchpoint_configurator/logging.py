@@ -48,7 +48,7 @@ def _get_log_level(level: Union[str, int, LogLevel, None]) -> int:
         except KeyError:
             raise ValueError(f"Invalid log level: {level}")
     if isinstance(level, int):
-        if level in [l.value for l in LogLevel]:
+        if level in [log_level.value for log_level in LogLevel]:
             return level
         raise ValueError(f"Invalid log level: {level}")
     return LogLevel.INFO.value

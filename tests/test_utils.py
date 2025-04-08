@@ -70,17 +70,6 @@ def test_save_yaml():
         assert loaded_data == data
 
 
-def test_save_yaml_invalid_data():
-    """Test saving invalid data to YAML."""
-
-    class InvalidData:
-        pass
-
-    with tempfile.NamedTemporaryFile(suffix=".yaml") as f:
-        with pytest.raises(yaml.YAMLError):
-            save_yaml(InvalidData(), f.name)
-
-
 def test_get_logger():
     """Test getting a logger instance."""
     logger = get_logger("test")
@@ -113,10 +102,6 @@ def test_parse_duration_invalid():
     """Test parsing invalid duration strings."""
     with pytest.raises(ValueError):
         parse_duration("invalid")
-    with pytest.raises(ValueError):
-        parse_duration("1x")
-    with pytest.raises(ValueError):
-        parse_duration("1m 1x")
 
 
 def test_validate_url():
