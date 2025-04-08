@@ -92,7 +92,8 @@ class CatchpointConfigurator:
             return {"status": "validated", "config": config}
 
         try:
-            if config["type"] == "test":
+            config_type = config["type"]
+            if config_type in ["test", "web"]:
                 # Check if test exists
                 existing_tests = self.api.list_tests({"name": config["name"]})
                 if existing_tests and not force:
@@ -114,7 +115,7 @@ class CatchpointConfigurator:
                     "name": config["name"],
                 }
 
-            elif config["type"] == "dashboard":
+            elif config_type == "dashboard":
                 # Check if dashboard exists
                 existing_dashboards = self.api.list_dashboards({"name": config["name"]})
                 if existing_dashboards and not force:
@@ -137,7 +138,7 @@ class CatchpointConfigurator:
                 }
 
             else:
-                raise ValidationError(f"Unknown configuration type: {config['type']}")
+                raise ValidationError(f"Unknown configuration type: {config_type}")
 
         except APIError as e:
             raise DeploymentError(f"Failed to deploy configuration: {e}")

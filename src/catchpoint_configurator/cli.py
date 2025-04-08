@@ -3,7 +3,6 @@ Command-line interface for Catchpoint Configurator.
 """
 
 import logging
-import sys
 from typing import Optional
 
 import click
@@ -97,8 +96,7 @@ def deploy(
         )
         click.echo(f"Deployment result: {result}")
     except Exception as e:
-        logger.error(f"Deployment failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Deployment failed: {e}")
 
 
 @cli.command()
@@ -110,8 +108,7 @@ def validate(ctx: Context, config_path: str) -> None:
         get_client(ctx).validate(config_path)
         click.echo("Configuration is valid")
     except Exception as e:
-        logger.error(f"Validation failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Validation failed: {e}")
 
 
 @cli.command()
@@ -127,8 +124,7 @@ def list(ctx: Context, type: Optional[str]) -> None:
         for config in configs:
             click.echo(f"- {config['name']} ({config['type']})")
     except Exception as e:
-        logger.error(f"Failed to list configurations: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Failed to list configurations: {e}")
 
 
 @cli.command()
@@ -155,8 +151,7 @@ def apply_template(
         if not output:
             click.echo(result)
     except Exception as e:
-        logger.error(f"Template application failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Template application failed: {e}")
 
 
 @cli.command()
@@ -183,8 +178,7 @@ def update(
         )
         click.echo(f"Update result: {result}")
     except Exception as e:
-        logger.error(f"Update failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Update failed: {e}")
 
 
 @cli.command()
@@ -208,8 +202,7 @@ def delete(
         )
         click.echo(f"Deletion result: {result}")
     except Exception as e:
-        logger.error(f"Deletion failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Deletion failed: {e}")
 
 
 @cli.command()
@@ -241,8 +234,7 @@ def export(
         if not output:
             click.echo(result)
     except Exception as e:
-        logger.error(f"Export failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Export failed: {e}")
 
 
 @cli.command()
@@ -274,8 +266,7 @@ def import_config(
         if not output:
             click.echo(result)
     except Exception as e:
-        logger.error(f"Import failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(f"Import failed: {e}")
 
 
 def main() -> None:

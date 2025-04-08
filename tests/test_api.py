@@ -27,6 +27,11 @@ def api():
     return CatchpointAPI("test_client", "test_secret")
 
 
+@pytest.fixture
+def api_client():
+    return CatchpointAPI("test_client", "test_secret")
+
+
 @patch("catchpoint_configurator.api.requests.post")
 def test_get_token_success(mock_post, api, mock_response):
     """Test successful token retrieval."""
@@ -91,7 +96,7 @@ def test_list_tests(mock_request, api):
     """Test listing tests."""
     mock_response = Mock()
     mock_response.json.return_value = {
-        "items": [{"id": "test1", "name": "Test 1"}, {"id": "test2", "name": "Test 2"}]
+        "tests": [{"id": "test1", "name": "Test 1"}, {"id": "test2", "name": "Test 2"}]
     }
     mock_response.raise_for_status.return_value = None
     mock_request.return_value = mock_response

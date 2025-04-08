@@ -2,8 +2,13 @@
 
 import logging
 import os
+from contextlib import contextmanager
 from enum import Enum
-from typing import Optional, Union
+from typing import Any, Generator, Optional, Union
+
+from .constants import LOG_FILE
+
+logger = logging.getLogger(__name__)
 
 
 class LogLevel(Enum):
@@ -15,169 +20,104 @@ class LogLevel(Enum):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
-    def __str__(self) -> str:
-        """Return string representation of log level."""
-        return self.name
-
-    def __eq__(self, other) -> bool:
-        """Compare log level with another level."""
+    def __eq__(self, other: Any) -> bool:
+        """Compare log levels."""
         if isinstance(other, LogLevel):
             return self.value == other.value
         if isinstance(other, int):
             return self.value == other
-        return NotImplemented
+        if isinstance(other, str):
+            try:
+                return self.value == LogLevel[other.upper()].value
+            except KeyError:
+                return False
+        return False
 
-    def __lt__(self, other) -> bool:
-        """Compare if this level is less than another level."""
-        if isinstance(other, LogLevel):
-            return self.value < other.value
-        if isinstance(other, int):
-            return self.value < other
-        return NotImplemented
-
-    def __le__(self, other) -> bool:
-        """Compare if this level is less than or equal to another level."""
-        if isinstance(other, LogLevel):
-            return self.value <= other.value
-        if isinstance(other, int):
-            return self.value <= other
-        return NotImplemented
-
-    def __gt__(self, other) -> bool:
-        """Compare if this level is greater than another level."""
-        if isinstance(other, LogLevel):
-            return self.value > other.value
-        if isinstance(other, int):
-            return self.value > other
-        return NotImplemented
-
-    def __ge__(self, other) -> bool:
-        """Compare if this level is greater than or equal to another level."""
-        if isinstance(other, LogLevel):
-            return self.value >= other.value
-        if isinstance(other, int):
-            return self.value >= other
-        return NotImplemented
+    def __str__(self) -> str:
+        """Return string representation."""
+        return self.name
 
 
-def _get_log_level(level: Union[str, LogLevel, None]) -> LogLevel:
-    """Convert string or LogLevel to LogLevel enum.
-
-    Args:
-        level: Log level as string or LogLevel enum
-
-    Returns:
-        LogLevel enum value
-    """
+def _get_log_level(level: Union[str, int, LogLevel, None]) -> int:
+    """Convert string or LogLevel to integer level value."""
     if isinstance(level, LogLevel):
-        return level
+        return level.value
     if isinstance(level, str):
         try:
-            return LogLevel[level.upper()]
+            return LogLevel[level.upper()].value
         except KeyError:
             raise ValueError(f"Invalid log level: {level}")
-    if level is None:
-        return LogLevel.INFO
-    raise ValueError(f"Invalid log level type: {type(level)}")
+    if isinstance(level, int):
+        if level in [l.value for l in LogLevel]:
+            return level
+        raise ValueError(f"Invalid log level: {level}")
+    return LogLevel.INFO.value
 
 
 def setup_logging(
-    level: Union[str, LogLevel] = LogLevel.INFO, log_file: Optional[str] = None
+    level: Union[str, int, LogLevel, None] = None,
+    log_file: Optional[str] = None,
+    debug: bool = False,
 ) -> None:
-    """Set up logging configuration.
+    """Set up logging configuration."""
+    if os.environ.get("CATCHPOINT_DEBUG") == "true":
+        debug = True
 
-    Args:
-        level: Log level to use (string or LogLevel enum)
-        log_file: Optional log file path
-    """
-    # Set log level from environment variable
-    if os.environ.get("CATCHPOINT_DEBUG", "").lower() == "true":
-        level = LogLevel.DEBUG
+    log_level = LogLevel.DEBUG.value if debug else _get_log_level(level)
 
-    # Convert level to LogLevel enum
-    log_level = _get_log_level(level)
-
-    # Configure root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(log_level.value)
+    root_logger.setLevel(log_level)
 
-    # Remove existing handlers
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Console handler
+    # Create console handler
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
+    console_handler.setLevel(log_level)
+    console_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(console_formatter)
     root_logger.addHandler(console_handler)
 
-    # File handler if specified
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
-        root_logger.addHandler(file_handler)
+    # Create file handler if log file is specified
+    if log_file or LOG_FILE:
+        file_path = log_file or LOG_FILE
+        if file_path:
+            dir_path = os.path.dirname(file_path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+            file_handler = logging.FileHandler(file_path)
+            file_handler.setLevel(log_level)
+            file_formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            file_handler.setFormatter(file_formatter)
+            root_logger.addHandler(file_handler)
 
 
 def get_logger(
-    name: str, level: Optional[Union[str, LogLevel]] = None, add_handlers: bool = False
+    name: str,
+    level: Union[str, int, LogLevel, None] = None,
+    handler: Optional[logging.Handler] = None,
 ) -> logging.Logger:
-    """Get a logger instance.
-
-    Args:
-        name: Logger name
-        level: Optional log level (string or LogLevel enum)
-        add_handlers: Whether to add handlers to the logger
-
-    Returns:
-        Logger instance
-    """
+    """Get a logger instance."""
     logger = logging.getLogger(name)
+    log_level = _get_log_level(level)
+    logger.setLevel(log_level)
 
-    if level is not None:
-        log_level = _get_log_level(level)
-        logger.setLevel(log_level.value)
-
-    if add_handlers and not logger.handlers:
-        # Add console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
-        logger.addHandler(console_handler)
+    if handler:
+        handler.setLevel(log_level)
+        logger.addHandler(handler)
 
     return logger
 
 
-class LoggerContext:
-    """Context manager for logger."""
-
-    def __init__(
-        self, name: str, level: Optional[Union[str, LogLevel]] = None, add_handlers: bool = False
-    ):
-        """Initialize logger context.
-
-        Args:
-            name: Logger name
-            level: Optional log level (string or LogLevel enum)
-            add_handlers: Whether to add handlers to the logger
-        """
-        self.name = name
-        self.level = level
-        self.add_handlers = add_handlers
-        self.logger = None
-
-    def __enter__(self) -> logging.Logger:
-        """Enter context and get logger.
-
-        Returns:
-            Logger instance
-        """
-        self.logger = get_logger(self.name, level=self.level, add_handlers=self.add_handlers)
-        return self.logger
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit context."""
-        pass
+@contextmanager
+def logger_context(
+    name: str,
+    level: Union[str, int, LogLevel, None] = None,
+    handler: Optional[logging.Handler] = None,
+) -> Generator[logging.Logger, None, None]:
+    """Get a logger instance as a context manager."""
+    logger = get_logger(name, level, handler)
+    try:
+        yield logger
+    finally:
+        if handler:
+            logger.removeHandler(handler)

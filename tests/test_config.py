@@ -8,8 +8,8 @@ from catchpoint_configurator.exceptions import ValidationError
 from catchpoint_configurator.types import (
     AlertConfig,
     TestConfig,
-    to_test_config,
     to_alert_config,
+    to_test_config,
 )
 
 
