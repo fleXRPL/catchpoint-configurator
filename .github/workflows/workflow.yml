@@ -47,10 +47,10 @@ jobs:
         safety check
     - name: Run tests and linting
       run: |
-        isort src/catchpoint-configurator tests
-        black src/catchpoint-configurator tests
-        flake8 src/catchpoint-configurator tests
-        pytest tests/ --cov=catchpoint-configurator --cov-report=xml --cov-report=term-missing --cov-fail-under=75 --junitxml=test-results.xml
+        isort src/catchpoint_configurator tests
+        black src/catchpoint_configurator tests
+        flake8 src/catchpoint_configurator tests
+        pytest tests/ --cov=catchpoint_configurator --cov-report=xml --cov-report=term-missing --cov-fail-under=75 --junitxml=test-results.xml
 
     - name: Upload test results
       if: always()
