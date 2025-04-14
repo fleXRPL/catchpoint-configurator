@@ -1,0 +1,45 @@
+[flake8]
+max-line-length = 125
+extend-ignore = E203, W503
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    venv,
+    .venv,
+    .tox,
+    .mypy_cache,
+    .pytest_cache,
+    .coverage,
+    htmlcov
+
+# Docstring settings
+docstring-convention = google
+
+# Complexity settings
+max-complexity =20
+
+# Import settings
+import-order-style = google
+application-import-names = catchpoint_configurator
+
+# Error format
+format = %(path)s:%(row)d:%(col)d: %(code)s %(text)s
+
+# Additional settings
+statistics = True
+count = True
+show-source = True
+
+# Specific file/error ignores
+per-file-ignores =
+    # Allow unused imports in __init__.py files
+    */__init__.py:F401
+    # Allow unused imports in test files
+    tests/*:F401,F811
+    # Allow undefined names in template tests (renderer is defined in fixtures)
+    tests/test_template.py:F821
+    # Allow unused variables in exception handling
+    tests/test_logging.py:F841 

@@ -1,0 +1,11 @@
+version: "1.0"
+dashboards:
+  - name: "Example Configuration"
+    description: "Example catchpoint configuration"
+    widgets:
+      - title: "CPU Usage"
+        type: "timeseries"
+        query: "avg:system.cpu.user{*}"
+      - title: "Memory Usage"
+        type: "timeseries"
+        query: "avg:system.mem.used{*}"

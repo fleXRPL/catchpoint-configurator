@@ -1,0 +1,24 @@
+type: test
+name: "{{ name }}"
+url: "{{ url }}"
+frequency: {{ frequency | default(300) }}
+nodes:
+  - "US-East"
+  - "US-West"
+  - "EU-West"
+  - "AP-Southeast"
+alerts:
+  - name: "High Response Time"
+    metric: "response_time"
+    threshold: {{ response_time_threshold | default(2000) }}
+    operator: ">"
+    recipients:
+      - email: "{{ alert_email }}"
+      - slack: "{{ alert_slack_channel }}"
+  - name: "Error Rate"
+    metric: "error_rate"
+    threshold: {{ error_rate_threshold | default(1) }}
+    operator: ">"
+    recipients:
+      - email: "{{ alert_email }}"
+      - slack: "{{ alert_slack_channel }}" 

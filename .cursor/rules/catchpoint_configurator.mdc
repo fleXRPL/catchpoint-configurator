@@ -1,0 +1,196 @@
+---
+description: Catchpoint Configurator is a Python package that allows you to define, version, and deploy Catchpoint health checks using YAML/JSON configuration files.
+globs: 
+alwaysApply: false
+---
+# Catchpoint Configurator Development Rules
+
+## Project Structure Requirements
+
+```bash
+catchpoint-configurator/
+├── src/
+│   └── catchpoint_configurator/
+│       ├── __init__.py      # Version and package metadata
+│       ├── api.py           # Catchpoint API client
+│       ├── cli.py           # CLI interface
+│       ├── config.py        # Configuration and validation
+│       ├── contest.py       # Contest management
+│       ├── core.py          # Core functionality
+│       ├── exceptions.py    # Custom exceptions
+│       ├── logging.py       # Logging configuration
+│       ├── template.py      # Template handling
+│       ├── types.py         # Type definitions
+│       └── utils.py         # Utility functions
+├── tests/                   # Test suite
+│   ├── test_api.py          # API tests
+│   ├── test_cli.py          # CLI tests
+│   ├── test_config.py       # Config tests
+│   ├── test_contest.py      # Contest tests
+│   ├── test_core.py         # Core tests
+│   ├── test_exceptions.py   # Exception tests
+│   ├── test_logging.py      # Logging tests
+│   ├── test_template.py     # Template tests
+│   ├── test_types.py        # Type tests
+│   └── test_utils.py        # Utility tests
+├── examples/                # Example configurations
+├── scripts/                 # Development scripts
+├── README.md                # Project documentation
+├── LICENSE                  # MIT License
+├── requirements.txt         # Production dependencies
+└── requirements-dev.txt     # Development dependencies
+```
+
+## Links
+- https://github.com/fleXRPL/catchpoint-configurator/wiki
+- https://github.com/fleXRPL/catchpoint-configurator/milestone/1
+- https://github.com/fleXRPL/catchpoint-configurator/issues
+
+## Code Quality Standards
+
+### Python Standards
+- Python 3.9+ compatibility required
+- Type hints for critical functions
+- Basic docstrings required
+- Maximum complexity score of 10
+- Line length limit: 120 characters
+- Test coverage minimum: 75%
+
+### Linting and Formatting
+- flake8 for linting
+- black for code formatting
+- isort for import sorting
+
+### Testing Requirements
+- pytest for test framework
+- pytest-cov for coverage
+- pytest-mock for mocking
+- Basic integration tests
+- Mocked external services
+
+## Security Requirements
+
+### Code Security
+- Basic input validation
+- API key handling
+- Error handling required
+
+### CI/CD Security
+- Basic dependency scanning
+- SonarQube Cloud integration
+
+## Documentation Requirements
+
+### Code Documentation
+- Basic module docstrings
+- Function docstrings
+- Type hints for critical functions
+
+### Project Documentation
+- Installation guide
+- Basic usage guide
+- Configuration examples
+
+## Development Workflow
+
+### Git Workflow
+- Feature branch workflow
+- Basic PR reviews
+- Semantic versioning
+
+### CI/CD Pipeline
+- Basic automated testing
+- Code quality checks
+- SonarQube analysis
+
+## Package Requirements
+
+### Core Features
+- Basic test configuration
+- Contest management
+- Template support
+- Configuration validation
+
+### Integration Features
+- Catchpoint API client
+- Basic template support
+- Configuration validation
+
+## Configuration Standards
+
+### YAML Configuration
+- Basic schema validation
+- Template support
+- Validation rules
+
+### CLI Interface
+- Basic command structure
+- Error reporting
+- Help documentation
+
+## Quality Gates
+
+### Code Quality
+- SonarQube Cloud analysis
+- Basic coverage requirements
+- No critical security issues
+
+### Release Quality
+- All tests passing
+- Basic coverage requirements met
+- Documentation updated
+
+## Dependencies
+
+### Production Dependencies
+- pyyaml>=6.0
+- click>=8.0
+- jsonschema>=4.0.0
+
+### Development Dependencies
+- pytest>=7.0.0
+- flake8>=4.0.0
+- black>=22.0.0
+- isort>=5.0.0
+
+## File Patterns
+
+### Python Files
+```python
+"""Module docstring with basic description."""
+
+import logging
+from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
+
+class ClassName:
+    """Class docstring with basic description."""
+
+    def method_name(self, param: Dict[str, Any]) -> bool:
+        """Method docstring with basic description."""
+        try:
+            result = self._process(param)
+            return result
+        except Exception as e:
+            logger.error("Error in method_name: %s", str(e))
+            raise
+```
+
+### Configuration Files
+```yaml
+# Basic configuration structure
+type: "test"
+name: "test-name"
+url: "https://example.com"
+frequency: 300
+nodes:
+  - "US-East"
+  - "US-West"
+```
+
+## Globs
+- "**/*.py"              # Python source files
+- "**/*.yaml"           # YAML configuration files
+- "**/*.md"            # Documentation files
+- "requirements*.txt"   # Dependency files
