@@ -7,7 +7,11 @@ from unittest.mock import Mock, patch
 import pytest
 import yaml
 
-from catchpoint_configurator.core import CatchpointConfigurator
+from catchpoint_configurator.core import (
+    CatchpointConfigurator,
+    DeletionError,
+    UpdateError,
+)
 from catchpoint_configurator.exceptions import (
     APIError,
     ConfigError,
@@ -387,3 +391,88 @@ def test_deploy_dashboard_dry_run(configurator, tmp_path, mock_api):
     assert result["status"] == "validated"
     assert result["config"] == config
     mock_api.create_dashboard.assert_not_called()
+
+
+def test_update_error():
+    """Test basic UpdateError exception."""
+    error = UpdateError("Test update failed")
+    assert str(error) == "Test update failed"
+
+
+def test_deletion_error():
+    """Test basic DeletionError exception."""
+    error = DeletionError("Test deletion failed")
+    assert str(error) == "Test deletion failed"
+
+
+def test_update_test(configurator, mock_api):
+    """Test basic test update operation."""
+    config = {
+        "type": "test",
+        "name": "Test Web Monitor",
+        "url": "https://example.com",
+        "frequency": 300,
+    }
+    mock_api.list_tests.return_value = [{"id": "test1", "name": "Test Web Monitor"}]
+    mock_api.update_test.return_value = {"id": "test1", "name": "Test Web Monitor"}
+
+    result = configurator.deploy(config, force=True)
+    assert result["status"] == "success"
+    assert result["action"] == "updated"
+
+
+def test_delete_test_success(configurator, mock_api):
+    """Test successful test deletion."""
+    config = {
+        "type": "test",
+        "name": "Test to Delete",
+        "url": "https://example.com",
+        "frequency": 300,
+    }
+    mock_api.list_tests.return_value = [{"id": "test1", "name": "Test to Delete"}]
+    mock_api.delete_test.return_value = {"status": "success"}
+
+    result = configurator.delete(config)
+    assert result["status"] == "success"
+    assert result["action"] == "deleted"
+    mock_api.delete_test.assert_called_once_with("test1")
+
+
+def test_deploy_validation_error(configurator, mock_api):
+    """Test deploy with invalid config type."""
+    config = {
+        "type": "invalid",
+        "name": "Invalid Test",
+        "url": "https://example.com",
+        "frequency": 300,
+    }
+    with pytest.raises(ValidationError, match="Invalid configuration type: invalid"):
+        configurator.deploy(config)
+
+
+def test_list_specific_type(configurator, mock_api):
+    """Test listing configurations of a specific type."""
+    mock_api.list_tests.return_value = [
+        {"id": "test1", "name": "Test 1"},
+        {"id": "test2", "name": "Test 2"},
+    ]
+
+    result = configurator.list(config_type="test")
+    assert len(result) == 2
+    assert all(test["type"] == "test" for test in result)
+    mock_api.list_tests.assert_called_once()
+    mock_api.list_dashboards.assert_not_called()
+
+
+def test_list_dashboards(configurator, mock_api):
+    """Test listing dashboard configurations."""
+    mock_api.list_dashboards.return_value = [
+        {"id": "dash1", "name": "Dashboard 1"},
+        {"id": "dash2", "name": "Dashboard 2"},
+    ]
+
+    result = configurator.list(config_type="dashboard")
+    assert len(result) == 2
+    assert all(dash["type"] == "dashboard" for dash in result)
+    mock_api.list_dashboards.assert_called_once()
+    mock_api.list_tests.assert_not_called()
