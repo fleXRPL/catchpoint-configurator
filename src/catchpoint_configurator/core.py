@@ -9,7 +9,7 @@ import yaml
 
 from .api import APIError, CatchpointAPI
 from .config import ConfigValidator
-from .exceptions import ValidationError
+from .exceptions import DeploymentError, ValidationError
 from .utils import load_yaml, save_yaml
 
 logger = logging.getLogger(__name__)
@@ -91,8 +91,8 @@ class CatchpointConfigurator:
         if dry_run:
             return {"status": "validated", "config": config}
 
+        config_type = config["type"]
         try:
-            config_type = config["type"]
             if config_type in ["test", "web"]:
                 # Check if test exists
                 existing_tests = self.api.list_tests({"name": config["name"]})
@@ -141,7 +141,7 @@ class CatchpointConfigurator:
                 raise ValidationError(f"Unknown configuration type: {config_type}")
 
         except APIError as e:
-            raise DeploymentError(f"Failed to deploy configuration: {e}")
+            raise DeploymentError(f"Failed to deploy configuration: {e}") from e
 
     def list(self, config_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """List existing configurations.
@@ -366,11 +366,13 @@ class CatchpointConfigurator:
 
         return config
 
-
-class DeploymentError(Exception):
-    """Raised when deployment fails."""
-
-    pass
+    def _get_test_id_by_name(self, name: str) -> str:
+        """Get test ID by name."""
+        tests = self.list_tests()
+        for test in tests:
+            if test["name"] == name:
+                return test["id"]
+        raise ValidationError(f"Test '{name}' not found")
 
 
 class UpdateError(Exception):

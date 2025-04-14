@@ -1,12 +1,19 @@
 """Tests for the core functionality."""
 
+import logging
 import os
 from unittest.mock import Mock, patch
 
 import pytest
+import yaml
 
 from catchpoint_configurator.core import CatchpointConfigurator
-from catchpoint_configurator.exceptions import ConfigError, ValidationError
+from catchpoint_configurator.exceptions import (
+    APIError,
+    ConfigError,
+    DeploymentError,
+    ValidationError,
+)
 
 
 @pytest.fixture
@@ -294,3 +301,89 @@ def test_delete_nonexistent(mock_api, configurator):
 
     with pytest.raises(ValidationError, match=r"Test 'Nonexistent Test' not found"):
         configurator.delete(config)
+
+
+def test_export_config_json(configurator, test_config_file, tmp_path):
+    """Test exporting a configuration in JSON format."""
+    # When format is json, export() returns the dict directly
+    result = configurator.export(test_config_file, format="json")
+    assert isinstance(result, dict)
+    assert result["type"] == "test"
+    assert result["name"] == "Test Web Monitor"
+
+
+def test_export_config_yaml(configurator, test_config_file, tmp_path):
+    """Test exporting a configuration in YAML format."""
+    # When format is yaml, export() returns a yaml string
+    result = configurator.export(test_config_file, format="yaml")
+    assert isinstance(result, str)
+    assert "type: test" in result
+    assert "name: Test Web Monitor" in result
+
+
+def test_import_config_yaml(configurator, tmp_path):
+    """Test importing a YAML configuration."""
+    import yaml
+
+    config = {
+        "type": "test",
+        "name": "Imported Test",
+        "url": "https://example.com",
+        "frequency": 300,
+    }
+    input_path = tmp_path / "import.yaml"
+    with open(input_path, "w") as f:
+        yaml.dump(config, f)
+
+    result = configurator.import_config(str(input_path))
+    assert isinstance(result, dict)
+    assert result["type"] == "test"
+    assert result["name"] == "Imported Test"
+
+
+def test_init_with_debug(monkeypatch):
+    """Test configurator initialization with debug flag."""
+    mock_basicConfig = Mock()
+    monkeypatch.setattr("logging.basicConfig", mock_basicConfig)
+
+    configurator = CatchpointConfigurator("test_client", "test_secret", debug=True)
+    assert configurator.client_id == "test_client"  # Use the configurator instance
+    mock_basicConfig.assert_called_once_with(level=logging.DEBUG)
+
+
+def test_apply_template_basic(configurator, tmp_path):
+    """Test basic template application."""
+    variables = {"name": "Template Test", "url": "https://example.com"}
+    output_path = tmp_path / "output.yaml"
+
+    result = configurator.apply_template("test_template", variables, str(output_path))
+    assert isinstance(result, dict)
+    assert os.path.exists(output_path)
+
+
+def test_export_config_with_output(configurator, test_config_file, tmp_path):
+    """Test exporting a configuration with output path."""
+    output_path = tmp_path / "exported.yaml"
+    result = configurator.export(test_config_file, str(output_path))
+    assert isinstance(result, str)
+    assert os.path.exists(output_path)
+    with open(output_path) as f:
+        content = f.read()
+    assert "type: test" in content
+
+
+def test_deploy_dashboard_dry_run(configurator, tmp_path, mock_api):
+    """Test deploying a dashboard in dry run mode."""
+    config = {
+        "type": "dashboard",
+        "name": "Test Dashboard",
+        "layout": [{"widget": "response_time"}],
+    }
+    config_file = tmp_path / "dashboard.yaml"
+    with open(config_file, "w") as f:
+        yaml.dump(config, f)
+
+    result = configurator.deploy(str(config_file), dry_run=True)
+    assert result["status"] == "validated"
+    assert result["config"] == config
+    mock_api.create_dashboard.assert_not_called()
