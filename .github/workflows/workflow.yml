@@ -32,6 +32,8 @@ jobs:
       run: |
         echo "PYTHONIOENCODING=utf-8" >> $GITHUB_ENV
         echo "PYTHONUTF8=1" >> $GITHUB_ENV
+        echo "TEMP=${{ runner.temp }}" >> $GITHUB_ENV
+        echo "TMP=${{ runner.temp }}" >> $GITHUB_ENV
       shell: bash
     - name: Install dependencies
       run: |

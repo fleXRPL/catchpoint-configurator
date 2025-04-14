@@ -41,7 +41,7 @@ jobs:
         with:
           args: >
             -Dsonar.organization=flexrpl
-            -Dsonar.projectKey=fleXRP_catchpoint-configurator
+            -Dsonar.projectKey=fleXRPL_catchpoint-configurator
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.sources=src/catchpoint_configurator
             -Dsonar.tests=tests
