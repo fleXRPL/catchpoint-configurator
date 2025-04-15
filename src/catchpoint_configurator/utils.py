@@ -102,13 +102,16 @@ def save_yaml(data: Any, file_path: Optional[str] = None) -> str:
 
     if not file_path:
         # Use a temporary file if no file path is provided
-        file_path = tempfile.NamedTemporaryFile(suffix=".yaml", delete=False).name
+        with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False, mode="w") as temp_file:
+            file_path = temp_file.name
+            temp_file.write(yaml_str)
 
-    try:
-        with open(file_path, "w") as f:
-            f.write(yaml_str)
-    except IOError as e:
-        raise IOError(f"Failed to write YAML file: {e}")
+    else:
+        try:
+            with open(file_path, "w") as f:
+                f.write(yaml_str)
+        except IOError as e:
+            raise IOError(f"Failed to write YAML file: {e}")
 
     return file_path
 
