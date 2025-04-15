@@ -64,10 +64,21 @@ def test_save_yaml():
             "url": "https://example.com",
         }
     }
+    # Test with explicit file path
     with tempfile.NamedTemporaryFile(suffix=".yaml") as f:
-        save_yaml(data, f.name)
-        loaded_data = load_yaml(f.name)
+        file_path = save_yaml(data, f.name)
+        loaded_data = load_yaml(file_path)
         assert loaded_data == data
+
+    # Test without file path (should create temp file)
+    file_path = save_yaml(data)
+    try:
+        loaded_data = load_yaml(file_path)
+        assert loaded_data == data
+    finally:
+        # Clean up temp file
+        if os.path.exists(file_path):
+            os.unlink(file_path)
 
 
 def test_get_logger():

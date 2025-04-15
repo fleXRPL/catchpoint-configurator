@@ -5,6 +5,7 @@ Utility functions for Catchpoint Configurator.
 import logging
 import os
 import re
+import tempfile
 from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse
 
@@ -79,27 +80,37 @@ def load_yaml(file_path: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         raise yaml.YAMLError(f"Invalid YAML: {str(e)}")
 
 
-def save_yaml(data: Any, file_path: str) -> None:
-    """Save data to YAML file.
+def save_yaml(data: Any, file_path: Optional[str] = None) -> str:
+    """Save data to YAML file. If no file_path is provided, saves to a temporary file.
 
     Args:
         data: Data to save
-        file_path: Path to YAML file
+        file_path: Path to YAML file (optional)
+
+    Returns:
+        The file path where data was saved
 
     Raises:
         yaml.YAMLError: If YAML is invalid
+        IOError: If writing to the file fails
     """
     try:
-        # Try to serialize the data to YAML first to catch any issues
+        # Serialize the data to YAML format
         yaml_str = yaml.dump(data, default_flow_style=False)
     except yaml.YAMLError as e:
         raise yaml.YAMLError(f"Failed to serialize data to YAML: {e}")
+
+    if not file_path:
+        # Use a temporary file if no file path is provided
+        file_path = tempfile.NamedTemporaryFile(suffix=".yaml", delete=False).name
 
     try:
         with open(file_path, "w") as f:
             f.write(yaml_str)
     except IOError as e:
         raise IOError(f"Failed to write YAML file: {e}")
+
+    return file_path
 
 
 def setup_logging(level: str = "INFO") -> None:
