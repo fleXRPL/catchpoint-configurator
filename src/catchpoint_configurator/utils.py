@@ -80,6 +80,16 @@ def load_yaml(file_path: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         raise yaml.YAMLError(f"Invalid YAML: {str(e)}")
 
 
+def get_temp_dir() -> str:
+    """Get appropriate temp directory based on platform."""
+    if os.name == "nt" and "GITHUB_WORKSPACE" in os.environ:
+        # On Windows in GitHub Actions, use the workspace directory
+        temp_dir = os.path.join(os.environ["GITHUB_WORKSPACE"], "tmp")
+        os.makedirs(temp_dir, exist_ok=True)
+        return temp_dir
+    return tempfile.gettempdir()
+
+
 def save_yaml(data: Any, file_path: Optional[str] = None) -> str:
     """Save data to YAML file. If no file_path is provided, saves to a temporary file.
 
@@ -101,18 +111,14 @@ def save_yaml(data: Any, file_path: Optional[str] = None) -> str:
         raise yaml.YAMLError(f"Failed to serialize data to YAML: {e}")
 
     if not file_path:
-        # Use a temporary file if no file path is provided
+        # Use a custom temp directory if needed
+        temp_dir = get_temp_dir()
+        temp_file_path = os.path.join(temp_dir, f"temp_{os.getpid()}.yaml")
         try:
-            with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False, mode="w") as temp_file:
-                temp_file.write(yaml_str)
-                temp_file_path = temp_file.name
+            with open(temp_file_path, "w") as f:
+                f.write(yaml_str)
         except Exception as e:
-            raise IOError(f"Failed to create or write to the temporary file: {e}")
-        finally:
-            # Explicitly close the file to avoid permission issues
-            temp_file.close()
-
-        # Return the temp file path
+            raise IOError(f"Failed to write to temporary file: {e}")
         return temp_file_path
     else:
         try:

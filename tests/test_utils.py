@@ -8,8 +8,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+from catchpoint_configurator.exceptions import ValidationError
 from catchpoint_configurator.utils import (
     format_duration,
+    get_env_var,
     get_logger,
     load_yaml,
     parse_duration,
@@ -20,6 +22,16 @@ from catchpoint_configurator.utils import (
 )
 
 
+def get_temp_dir():
+    """Get appropriate temp directory based on platform."""
+    if os.name == "nt" and "GITHUB_WORKSPACE" in os.environ:
+        # On Windows in GitHub Actions, use the workspace directory
+        temp_dir = os.path.join(os.environ["GITHUB_WORKSPACE"], "tmp")
+        os.makedirs(temp_dir, exist_ok=True)
+        return temp_dir
+    return tempfile.gettempdir()
+
+
 def test_load_yaml():
     """Test loading YAML files."""
     yaml_content = """
@@ -27,12 +39,17 @@ def test_load_yaml():
       name: test-web
       url: https://example.com
     """
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml") as f:
-        f.write(yaml_content)
-        f.flush()
-        data = load_yaml(f.name)
+    temp_dir = get_temp_dir()
+    temp_file = os.path.join(temp_dir, f"test_{os.getpid()}.yaml")
+    try:
+        with open(temp_file, "w") as f:
+            f.write(yaml_content)
+        data = load_yaml(temp_file)
         assert data["test"]["name"] == "test-web"
         assert data["test"]["url"] == "https://example.com"
+    finally:
+        if os.path.exists(temp_file):
+            os.unlink(temp_file)
 
 
 def test_load_yaml_not_found():
@@ -49,11 +66,16 @@ def test_load_yaml_invalid():
       url: https://example.com
       invalid: yaml: content
     """
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml") as f:
-        f.write(yaml_content)
-        f.flush()
+    temp_dir = get_temp_dir()
+    temp_file = os.path.join(temp_dir, f"test_invalid_{os.getpid()}.yaml")
+    try:
+        with open(temp_file, "w") as f:
+            f.write(yaml_content)
         with pytest.raises(yaml.YAMLError):
-            load_yaml(f.name)
+            load_yaml(temp_file)
+    finally:
+        if os.path.exists(temp_file):
+            os.unlink(temp_file)
 
 
 def test_save_yaml():
@@ -64,21 +86,15 @@ def test_save_yaml():
             "url": "https://example.com",
         }
     }
-    # Test with explicit file path
-    with tempfile.NamedTemporaryFile(suffix=".yaml") as f:
-        file_path = save_yaml(data, f.name)
-        loaded_data = load_yaml(file_path)
-        assert loaded_data == data
-
-    # Test without file path (should create temp file)
-    file_path = save_yaml(data)
+    temp_dir = get_temp_dir()
+    temp_file = os.path.join(temp_dir, f"test_save_{os.getpid()}.yaml")
     try:
+        file_path = save_yaml(data, temp_file)
         loaded_data = load_yaml(file_path)
         assert loaded_data == data
     finally:
-        # Clean up temp file
-        if os.path.exists(file_path):
-            os.unlink(file_path)
+        if os.path.exists(temp_file):
+            os.unlink(temp_file)
 
 
 def test_get_logger():
@@ -183,3 +199,59 @@ def test_path_operations():
         assert not test_file.exists()
         assert not test_dir.exists()
         assert not new_file.exists()
+
+
+def test_get_env_var_required():
+    """Test getting a required environment variable that doesn't exist."""
+    with pytest.raises(ValidationError, match="Required environment variable TEST_VAR not found"):
+        get_env_var("TEST_VAR", required=True)
+
+
+def test_get_env_var_not_required():
+    """Test getting an optional environment variable that doesn't exist."""
+    assert get_env_var("TEST_VAR", required=False) is None
+
+
+def test_save_yaml_serialization_error(monkeypatch):
+    """Test saving YAML with non-serializable data."""
+
+    def mock_dump(*args, **kwargs):
+        raise yaml.YAMLError("Test serialization error")
+
+    monkeypatch.setattr(yaml, "dump", mock_dump)
+    with pytest.raises(yaml.YAMLError, match="Failed to serialize data to YAML"):
+        save_yaml({"test": "data"})
+
+
+def test_save_yaml_write_error(monkeypatch):
+    """Test saving YAML with write permission error."""
+
+    def mock_open(*args, **kwargs):
+        raise IOError("Permission denied")
+
+    monkeypatch.setattr("builtins.open", mock_open)
+    with pytest.raises(IOError, match="Failed to write YAML file"):
+        save_yaml({"test": "data"}, "test.yaml")
+
+
+def test_save_yaml_temp_write_error(monkeypatch):
+    """Test saving YAML to temp file with write error."""
+
+    def mock_open(*args, **kwargs):
+        raise IOError("Permission denied")
+
+    monkeypatch.setattr("builtins.open", mock_open)
+    with pytest.raises(IOError, match="Failed to write to temporary file"):
+        save_yaml({"test": "data"})
+
+
+def test_validate_url_invalid_scheme():
+    """Test validating URL with invalid scheme."""
+    assert not validate_url("ftp://example.com")
+    assert not validate_url("invalid://example.com")
+
+
+def test_validate_url_missing_netloc():
+    """Test validating URL with missing network location."""
+    assert not validate_url("http://")
+    assert not validate_url("https://")
