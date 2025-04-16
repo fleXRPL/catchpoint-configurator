@@ -14,6 +14,8 @@ from catchpoint_configurator.types import (
     NodeList,
     RecipientConfig,
     TestConfig,
+    to_alert_config,
+    to_test_config,
 )
 
 
@@ -223,3 +225,23 @@ def test_type_compatibility(mock_type_validator):
             ],
         }
         assert mock_test.validate(test_config)
+
+
+def test_to_test_config_invalid():
+    """Test converting invalid dictionary to TestConfig."""
+    invalid_test = {
+        "name": "test-web",
+        # Missing required fields
+    }
+    with pytest.raises(ValueError, match="Invalid test configuration"):
+        to_test_config(invalid_test)
+
+
+def test_to_alert_config_invalid():
+    """Test converting invalid dictionary to AlertConfig."""
+    invalid_alert = {
+        "metric": "response_time",
+        # Missing required fields
+    }
+    with pytest.raises(ValueError, match="Invalid alert configuration"):
+        to_alert_config(invalid_alert)

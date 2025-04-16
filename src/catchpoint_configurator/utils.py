@@ -5,6 +5,7 @@ Utility functions for Catchpoint Configurator.
 import logging
 import os
 import re
+import tempfile
 from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse
 
@@ -79,27 +80,54 @@ def load_yaml(file_path: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         raise yaml.YAMLError(f"Invalid YAML: {str(e)}")
 
 
-def save_yaml(data: Any, file_path: str) -> None:
-    """Save data to YAML file.
+def get_temp_dir() -> str:
+    """Get appropriate temp directory based on platform."""
+    if os.name == "nt" and "GITHUB_WORKSPACE" in os.environ:
+        # On Windows in GitHub Actions, use the workspace directory
+        temp_dir = os.path.join(os.environ["GITHUB_WORKSPACE"], "tmp")
+        os.makedirs(temp_dir, exist_ok=True)
+        return temp_dir
+    return tempfile.gettempdir()
+
+
+def save_yaml(data: Any, file_path: Optional[str] = None) -> str:
+    """Save data to YAML file. If no file_path is provided, saves to a temporary file.
 
     Args:
         data: Data to save
-        file_path: Path to YAML file
+        file_path: Path to YAML file (optional)
+
+    Returns:
+        The file path where data was saved
 
     Raises:
         yaml.YAMLError: If YAML is invalid
+        IOError: If writing to the file fails
     """
     try:
-        # Try to serialize the data to YAML first to catch any issues
+        # Serialize the data to YAML format
         yaml_str = yaml.dump(data, default_flow_style=False)
     except yaml.YAMLError as e:
         raise yaml.YAMLError(f"Failed to serialize data to YAML: {e}")
 
-    try:
-        with open(file_path, "w") as f:
-            f.write(yaml_str)
-    except IOError as e:
-        raise IOError(f"Failed to write YAML file: {e}")
+    if not file_path:
+        # Use a custom temp directory if needed
+        temp_dir = get_temp_dir()
+        temp_file_path = os.path.join(temp_dir, f"temp_{os.getpid()}.yaml")
+        try:
+            with open(temp_file_path, "w") as f:
+                f.write(yaml_str)
+        except Exception as e:
+            raise IOError(f"Failed to write to temporary file: {e}")
+        return temp_file_path
+    else:
+        try:
+            with open(file_path, "w") as f:
+                f.write(yaml_str)
+        except IOError as e:
+            raise IOError(f"Failed to write YAML file: {e}")
+
+    return file_path
 
 
 def setup_logging(level: str = "INFO") -> None:

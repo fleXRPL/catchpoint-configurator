@@ -31,7 +31,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest tests/ --cov=catchpoint-configurator --cov-report=xml --cov-report=term-missing
+          pytest tests/ --cov=src/catchpoint_configurator --cov-report=xml --cov-report=term-missing
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
@@ -41,9 +41,9 @@ jobs:
         with:
           args: >
             -Dsonar.organization=flexrpl
-            -Dsonar.projectKey=fleXRP_catchpoint-configurator
+            -Dsonar.projectKey=fleXRPL_catchpoint-configurator
             -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.sources=src/catchpoint-configurator
+            -Dsonar.sources=src/catchpoint_configurator
             -Dsonar.tests=tests
             -Dsonar.python.version=3
             -Dsonar.sourceEncoding=UTF-8

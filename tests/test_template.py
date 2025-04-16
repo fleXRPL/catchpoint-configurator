@@ -200,3 +200,9 @@ def test_render_template_with_filters(mock_template_renderer):
         }
         result = render_template(template, variables)
         assert result == expected_result
+
+
+def test_render_template_file_not_found():
+    """Test rendering a non-existent template file."""
+    with pytest.raises(TemplateError, match="Failed to render template nonexistent.yaml"):
+        render_template("nonexistent.yaml", {})

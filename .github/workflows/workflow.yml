@@ -33,6 +33,13 @@ jobs:
         echo "PYTHONIOENCODING=utf-8" >> $GITHUB_ENV
         echo "PYTHONUTF8=1" >> $GITHUB_ENV
       shell: bash
+
+    - name: Ensure Temp Directory Permissions
+      if: runner.os == 'Windows'
+      run: |
+        icacls %TEMP% /grant Everyone:(F)
+      shell: cmd
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -47,10 +54,10 @@ jobs:
         safety check
     - name: Run tests and linting
       run: |
-        isort src/catchpoing-configurator tests
-        black src/catchpoing-configurator tests
-        flake8 src/catchpoing-configurator tests
-        pytest tests/ --cov=catchpoing-configurator --cov-report=xml --cov-report=term-missing --cov-fail-under=75 --junitxml=test-results.xml
+        isort src/catchpoint_configurator tests
+        black src/catchpoint_configurator tests
+        flake8 src/catchpoint_configurator tests
+        pytest tests/ --cov=catchpoint_configurator --cov-report=xml --cov-report=term-missing --cov-fail-under=75 --junitxml=test-results.xml
 
     - name: Upload test results
       if: always()
